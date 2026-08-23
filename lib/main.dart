@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'signin.dart';
+import 'package:assignment_flood/signIn.dart';
+import 'signOut.dart';
+import 'signUp.dart';
+
 void main() {
   runApp(const MainApp());
 }
@@ -9,57 +12,49 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
+    return const MaterialApp(
+      home: HomePage(), // moved content into its own widget
+    );
+  }
+}
 
-              Image.asset(
-                'assets/images/Mobile Wallpaper.png',
-                fit: BoxFit.cover,
-              ),
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
 
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-
-                  const SizedBox(
-                    height: 20,
-                  ),
-
-                  const SizedBox(
-                    height: 10,
-                  ),
-
-
-                  // Take up empty screen space
-                  const Expanded(
-                    child: SizedBox(),
-                  ),
-
-                  // Get Started button
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context)=> const SignIn(),
-                          ),
-                      );
-                    },
-                    child: const Text('Get Started'),
-                  ),
-
-                  const SizedBox(
-                    height: 30,
-                  ),
-                ],
-              ),
-            ],
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        fit: StackFit.expand,
+        alignment: Alignment.center,
+        children: [
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/Mobile Wallpaper.png',
+              fit: BoxFit.cover,
+            ),
           ),
-        ),
+          SafeArea(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Expanded(child: SizedBox()),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context, // now this context IS below MaterialApp
+                      MaterialPageRoute(
+                        builder: (context) => const SignIn(),
+                      ),
+                    );
+                  },
+                  child: const Text('Get Started'),
+                ),
+                const SizedBox(height: 30),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
