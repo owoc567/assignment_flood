@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:assignment_flood/signIn.dart';
-import 'signOut.dart';
-import 'signUp.dart';
 
 void main() {
   runApp(const MainApp());

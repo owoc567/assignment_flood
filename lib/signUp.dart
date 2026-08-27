@@ -4,6 +4,7 @@ import 'package:assignment_flood/signIn.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 
 class SignUp extends StatefulWidget {
@@ -14,8 +15,18 @@ class SignUp extends StatefulWidget {
 
 
 }
+//username: minimum 3 characters, letters/numbers/underscore only
+//email: valid email format
+//password: minimum 8characters, upper, lower, number, special character, no spaces
+//all fields cannot be empty
 
 class _SignUpState extends State<SignUp> {
+  final _formKey = GlobalKey<FormState>();
+  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
@@ -101,11 +112,120 @@ class _SignUpState extends State<SignUp> {
     });
   }
 
+  Future<void> _registerAccount() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setString(
+      'username',
+      _usernameController.text.trim(),
+    );
+
+    await prefs.setString(
+      'email',
+      _emailController.text.trim().toLowerCase(),
+    );
+
+    await prefs.setString(
+      'password',
+      _passwordController.text,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Account registered successfully'),
+      ),
+    );
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SignIn(),
+      ),
+    );
+  }
 
   @override
   void initState() {
     super.initState();
   }
+  //purpose:
+  @override
+  void dispose(){
+    _usernameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();//this for what
+  }
+
+  String? _validateUsername(String? value){
+    final username = value?.trim() ?? '';//use for..?
+    if(username.isEmpty){
+      return 'Please enter your name';
+    }
+    if(username.length < 3){
+      return 'Username must have at least 3 characters';
+    }
+    if(!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(username)){
+      return 'Use letters,numbers, and underscore only';
+    }
+    return null;
+  }
+
+  String? _validateEmail(String? value){
+    final email = value?.trim() ?? '';//use for..?
+    if(email.isEmpty){
+      return 'Please enter your email';
+    }
+    if (!RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+    ).hasMatch(email)) {
+      return 'Please enter a valid email address';
+    }
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    final password = value ?? '';
+    if (password.isEmpty) {
+      return 'Please enter your password';
+    }
+    if (password.length < 8) {
+      return 'Password must have at least 8 characters';
+    }
+    if (!RegExp(r'[A-Z]').hasMatch(password)) {
+      return 'Include at least one uppercase letter';
+    }
+    if (!RegExp(r'[a-z]').hasMatch(password)) {
+      return 'Include at least one lowercase letter';
+    }
+    if (!RegExp(r'[0-9]').hasMatch(password)) {
+      return 'Include at least one number';
+    }
+    if (!RegExp(r'[^a-zA-Z0-9]').hasMatch(password)) {
+      return 'Include at least one special character';
+    }
+    if (password.contains(' ')) {
+      return 'Password cannot contain spaces';
+    }
+    return null;
+  }
+
+  String? _validateConfirmPassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please confirm your password';
+    }
+    if (value != _passwordController.text) {
+      return 'Passwords do not match';
+    }
+    return null;
+  }
+
+  //ui
 
   @override
   Widget build(BuildContext context) {
@@ -141,7 +261,9 @@ class _SignUpState extends State<SignUp> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(25.0),
               ),
-              child: Column(
+              child: Form(
+                  key: _formKey,
+                  child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -156,7 +278,7 @@ class _SignUpState extends State<SignUp> {
                         ),
                       ),
                       TextButton(
-                        onPressed: () {
+                        onPressed: () async {
                           Navigator.pop(context);
                         },
                         child: const Text(
@@ -200,7 +322,11 @@ class _SignUpState extends State<SignUp> {
                   const SizedBox(height: 6),
 
                   //username field
-                  TextField(
+                  TextFormField(
+                    controller: _usernameController,
+                    textInputAction: TextInputAction.next,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: _validateUsername,
                     decoration: InputDecoration(
                       hintText: 'enter your username',
                       filled: true,
@@ -226,7 +352,12 @@ class _SignUpState extends State<SignUp> {
                   const SizedBox(height: 6),
 
                   //email field
-                  TextField(
+                  TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: _validateEmail,
                     decoration: InputDecoration(
                       hintText: 'enter your email',
                       filled: true,
@@ -252,8 +383,12 @@ class _SignUpState extends State<SignUp> {
                   ),
                   //password field
                   const SizedBox(height: 6),
-                  TextField(
+                  TextFormField(
+                    controller: _passwordController,
                     obscureText: _obscurePassword,
+                    textInputAction: TextInputAction.next,//purpose
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: _validatePassword,
                     decoration: InputDecoration(
                       hintText: 'enter your password',
                       filled: true,
@@ -285,7 +420,10 @@ class _SignUpState extends State<SignUp> {
                   const SizedBox(height: 24),
 
                   // confirm password field
-                  TextField(
+                  TextFormField(
+                    controller: _confirmPasswordController,
+                    validator: _validateConfirmPassword,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
                     obscureText: _obscureConfirmPassword,
                     decoration: InputDecoration(
                       hintText: 'confirm your password',
@@ -319,14 +457,11 @@ class _SignUpState extends State<SignUp> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        // TODO: add account registration logic here
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SignIn(),
-                          ),
-                        );
+                      onPressed: () async{
+                        if(!_formKey.currentState!.validate()){
+                          return;
+                        }
+                        await _registerAccount();
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.indigo.shade900,
@@ -349,7 +484,7 @@ class _SignUpState extends State<SignUp> {
               ),
             ),
           ),
-
+          ),
         ],
       ),
     );

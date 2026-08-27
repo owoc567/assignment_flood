@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dashboard.dart';
-import 'signUp.dart';
+import 'package:assignment_flood/signUp.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SignIn extends StatefulWidget {
   const SignIn({super.key});
@@ -10,7 +11,107 @@ class SignIn extends StatefulWidget {
 }
 
 class _SignInState extends State<SignIn> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+
+  String? _validateEmail(String? value) {
+    final email = value?.trim() ?? '';
+    if (email.isEmpty) {
+      return 'Please enter your email';
+    }
+    if (!RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+    ).hasMatch(email)) {
+      return 'Please enter a valid email address';
+    }
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your password';
+    }
+    return null;
+  }
+
+  void _showMessage(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Sign In Failed'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+
+  Future<void> _signIn() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final savedEmail = prefs.getString('email');
+    final savedPassword = prefs.getString('password');
+
+    if (!mounted) {
+      return;
+    }
+
+    // User has never signed up
+    if (savedEmail == null || savedPassword == null) {
+      _showMessage(
+        'No user account found. Please sign up first.',
+      );
+      return;
+    }
+
+    final enteredEmail =
+    _emailController.text.trim().toLowerCase();
+
+    final enteredPassword =
+        _passwordController.text;
+
+    // Email does not match
+    if (enteredEmail != savedEmail) {
+      _showMessage(
+        'Email not found. Please sign up first.',
+      );
+      return;
+    }
+
+    // Password does not match
+    if (enteredPassword != savedPassword) {
+      _showMessage(
+        'Incorrect password. Please try again.',
+      );
+      return;
+    }
+
+    // Email and password are correct
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const Dashboard(),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,19 +138,23 @@ class _SignInState extends State<SignIn> {
           Container(
             color: Colors.black.withValues(alpha: 0.2),
           ),
-          Center(
-            child: Container(
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Center(
+                  child: Container(
               width: 335,
               padding: const EdgeInsets.all(24.0),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(25.0),
               ),
-              child: Column(
+              child: Form(
+                key: _formKey,
+                child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
                   // Title row: "Sign in" + "Signup" link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -96,7 +201,12 @@ class _SignInState extends State<SignIn> {
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 6),
-                  TextField(
+                  TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: _validateEmail,
                     decoration: InputDecoration(
                       hintText: 'enter your email',
                       filled: true,
@@ -120,8 +230,12 @@ class _SignInState extends State<SignIn> {
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 6),
-                  TextField(
+                  TextFormField(
+                    controller: _passwordController,
                     obscureText: _obscurePassword,
+                    textInputAction: TextInputAction.done,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: _validatePassword,
                     decoration: InputDecoration(
                       hintText: 'enter your password',
                       filled: true,
@@ -156,15 +270,11 @@ class _SignInState extends State<SignIn> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        // TODO: validate email/password against your
-                        // auth backend before navigating.
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const Dashboard(),
-                          ),
-                        );
+                      onPressed: () async{
+                        if(_formKey.currentState!.validate()){
+                          await _signIn();
+                        }
+                        await _signIn();
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.indigo.shade900,
@@ -183,14 +293,15 @@ class _SignInState extends State<SignIn> {
                       ),
                     ),
                   ),
-
                 ],
               ),
             ),
           ),
-
-        ],
-      ),
+         ),
+        ),
+       ),
+      ],
+     ),
     );
   }
 }
