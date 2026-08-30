@@ -1,0 +1,102 @@
+[
+  {
+    "station_name": "Sg. Golak at Kuala Balah",
+    "river_name": "Sungai Golak",
+    "state": "Kelantan",
+    "river_basin": "Kelantan River Basin",
+    "water_level": 12.30,
+    "rainfall": 64.0,
+    "status": "Danger",
+    "last_updated": "30 Aug 2026, 10:30 AM"
+  },
+  {
+    "station_name": "Sg. Kelantan at Guillemard",
+    "river_name": "Sungai Kelantan",
+    "state": "Kelantan",
+    "river_basin": "Kelantan River Basin",
+    "water_level": 18.40,
+    "rainfall": 45.0,
+    "status": "Warning",
+    "last_updated": "30 Aug 2026, 10:30 AM"
+  },
+  {
+    "station_name": "Sg. Lebir at Kg. Manik",
+    "river_name": "Sungai Lebir",
+    "state": "Kelantan",
+    "river_basin": "Kelantan River Basin",
+    "water_level": 8.40,
+    "rainfall": 28.0,
+    "status": "Alert",
+    "last_updated": "30 Aug 2026, 10:15 AM"
+  },
+  {
+    "station_name": "Sg. Galas at Dabong",
+    "river_name": "Sungai Galas",
+    "state": "Kelantan",
+    "river_basin": "Kelantan River Basin",
+    "water_level": 7.20,
+    "rainfall": 20.0,
+    "status": "Alert",
+    "last_updated": "30 Aug 2026, 10:15 AM"
+  },
+  {
+    "station_name": "Sg. Nenggiri at Manek Urai",
+    "river_name": "Sungai Nenggiri",
+    "state": "Kelantan",
+    "river_basin": "Kelantan River Basin",
+    "water_level": 4.10,
+    "rainfall": 5.0,
+    "status": "Normal",
+    "last_updated": "30 Aug 2026, 10:00 AM"
+  },
+  {
+    "station_name": "Sg. Perias at Gua Musang",
+    "river_name": "Sungai Perias",
+    "state": "Kelantan",
+    "river_basin": "Kelantan River Basin",
+    "water_level": 3.60,
+    "rainfall": 0.0,
+    "status": "Normal",
+    "last_updated": "30 Aug 2026, 10:00 AM"
+  },
+  {
+    "station_name": "Sg. Klang at Taman Sri Muda",
+    "river_name": "Sungai Klang",
+    "state": "Selangor",
+    "river_basin": "Klang River Basin",
+    "water_level": 4.28,
+    "rainfall": 18.5,
+    "status": "Alert",
+    "last_updated": "30 Aug 2026, 9:45 AM"
+  },
+  {
+    "station_name": "Sg. Langat at Kajang",
+    "river_name": "Sungai Langat",
+    "state": "Selangor",
+    "river_basin": "Langat River Basin",
+    "water_level": 2.80,
+    "rainfall": 7.0,
+    "status": "Normal",
+    "last_updated": "30 Aug 2026, 9:45 AM"
+  },
+  {
+    "station_name": "Sg. Terengganu at Kuala Terengganu",
+    "river_name": "Sungai Terengganu",
+    "state": "Terengganu",
+    "river_basin": "Terengganu River Basin",
+    "water_level": 5.90,
+    "rainfall": 15.0,
+    "status": "Alert",
+    "last_updated": "30 Aug 2026, 9:30 AM"
+  },
+  {
+    "station_name": "Sg. Perak at Pasang Api",
+    "river_name": "Sungai Perak",
+    "state": "Perak",
+    "river_basin": "Perak River Basin",
+    "water_level": 1.82,
+    "rainfall": 11.0,
+    "status": "Normal",
+    "last_updated": "30 Aug 2026, 9:30 AM"
+  }
+]
