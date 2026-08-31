@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SignOut extends StatelessWidget {
   const SignOut({super.key});
@@ -34,16 +35,16 @@ class SignOut extends StatelessWidget {
                   const Icon(Icons.logout, size: 48, color: Colors.indigo),
                   const SizedBox(height: 16),
                   const Text('Sign Out',
-                              style: TextStyle(
-                                fontSize: 26,
-                                fontWeight: FontWeight.bold,
-                              ),
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                      'Are you sure you want to sign out of your account?',
-                       textAlign: TextAlign.center,
-                       style: TextStyle(color: Colors.grey, fontSize: 14),
+                    'Are you sure you want to sign out of your account?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey, fontSize: 14),
                   ),
                   const SizedBox(height: 24),
 
@@ -51,24 +52,30 @@ class SignOut extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                        onPressed: (){
-                          Navigator.of(context).popUntil((route) => route.isFirst);
-                        },
-                        style: ElevatedButton.styleFrom(
+                      onPressed: () async {
+                        await Supabase.instance.client.auth.signOut();
+
+                        if (!context.mounted) {
+                          return;
+                        }
+
+                        Navigator.of(context).popUntil((route) => route.isFirst);
+                      },
+                      style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.indigo.shade900,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
                           )
+                      ),
+                      child: const Text(
+                        'Sign Out',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
-                        child: const Text(
-                            'Sign Out',
-                             style: TextStyle(
-                               fontSize: 16,
-                               fontWeight: FontWeight.bold,
-                             ),
-                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -79,10 +86,10 @@ class SignOut extends StatelessWidget {
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        )
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          )
                       ),
                       child: const Text(
                         'Cancel',

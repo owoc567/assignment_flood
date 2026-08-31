@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:assignment_flood/signIn.dart';
+import 'package:assignment_flood/Users/signIn.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Supabase.initialize(
+    url: 'https://supzirushfgvowladjql.supabase.co',
+    anonKey: 'sb_publishable_KBu8WzJ0dYQcnXedQbDgZg_du4P1mYJ',
+  );
+
   runApp(const MainApp());
 }
 

@@ -1,46 +1,14 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import 'forecast.dart';
-import 'signOut.dart';
-
-class FloodStation {
-  final String stationName;
-  final String riverName;
-  final String state;
-  final String riverBasin;
-  final double waterLevel;
-  final double rainfall;
-  final String status;
-  final String lastUpdated;
-
-  const FloodStation({
-    required this.stationName,
-    required this.riverName,
-    required this.state,
-    required this.riverBasin,
-    required this.waterLevel,
-    required this.rainfall,
-    required this.status,
-    required this.lastUpdated,
-  });
-
-  factory FloodStation.fromJson(Map<String, dynamic> json) {
-    return FloodStation(
-      stationName: json['station_name'],
-      riverName: json['river_name'],
-      state: json['state'],
-      riverBasin: json['river_basin'],
-      waterLevel: (json['water_level'] as num).toDouble(),
-      rainfall: (json['rainfall'] as num).toDouble(),
-      status: json['status'],
-      lastUpdated: json['last_updated'],
-    );
-  }
-}
+import 'flood_service.dart';
+import 'flood_station.dart';
+import 'Users/profile.dart';
+import 'reportflood.dart';
+import 'search.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -51,7 +19,8 @@ class Dashboard extends StatefulWidget {
 
 class _DashboardState extends State<Dashboard> {
   Future<List<Forecast>>? forecastData;
-  Future<List<FloodStation>>? floodStationData;
+  Future<FloodStationSummary>? floodData;
+  final FloodService _floodService = FloodService();
 
   @override
   void initState() {
@@ -59,17 +28,7 @@ class _DashboardState extends State<Dashboard> {
 
     // St009 represents WP Kuala Lumpur.
     forecastData = _fetchForecastData('St009');
-    floodStationData = _loadFloodStationData();
-  }
-
-  Future<List<FloodStation>> _loadFloodStationData() async {
-    final jsonString = await rootBundle.loadString(
-      'assets/data/flood_stations.json',
-    );
-    final jsonData = jsonDecode(jsonString) as List;
-    return jsonData.map((json) {
-      return FloodStation.fromJson(json);
-    }).toList();
+    floodData = _floodService.fetchStationSummary();
   }
 
   Future<List<Forecast>> _fetchForecastData(
@@ -106,11 +65,31 @@ class _DashboardState extends State<Dashboard> {
     }
   }
 
-  void _refreshData() {
+  void _refreshWeather() {
     setState(() {
       forecastData = _fetchForecastData('St009');
-      floodStationData = _loadFloodStationData();
     });
+  }
+
+  Future<void> _refreshDashboard() async {
+    setState(() {
+      forecastData = _fetchForecastData('St009');
+      floodData = _floodService.fetchStationSummary();
+    });
+
+    await Future.wait([
+      forecastData!,
+      floodData!,
+    ]);
+  }
+
+  void _openSearchPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SearchPage(),
+      ),
+    );
   }
 
   @override
@@ -178,7 +157,7 @@ class _DashboardState extends State<Dashboard> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
-            _refreshData();
+            await _refreshDashboard();
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -192,16 +171,19 @@ class _DashboardState extends State<Dashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                FutureBuilder<List<FloodStation>>(
-                  future: floodStationData,
+                FutureBuilder<FloodStationSummary>(
+                  future: floodData,
                   builder: (context, snapshot) {
-                    if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-                      return _warningCard(_highestRiskStation(snapshot.data!));
+                    if (snapshot.connectionState ==
+                        ConnectionState.waiting) {
+                      return _floodLoadingCard();
+                    } else if (snapshot.hasError) {
+                      return _floodErrorCard(snapshot.error.toString());
+                    } else if (snapshot.hasData) {
+                      return _warningCard(snapshot.data!);
+                    } else {
+                      return _floodErrorCard('No flood data available.');
                     }
-                    if (snapshot.hasError) {
-                      return _floodDataErrorCard(snapshot.error.toString());
-                    }
-                    return _dataLoadingCard();
                   },
                 ),
 
@@ -237,53 +219,19 @@ class _DashboardState extends State<Dashboard> {
 
                 const SizedBox(height: 14),
 
-                FutureBuilder<List<FloodStation>>(
-                  future: floodStationData,
+                FutureBuilder<FloodStationSummary>(
+                  future: floodData,
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return _dataLoadingCard();
+                    if (snapshot.connectionState ==
+                        ConnectionState.waiting) {
+                      return _stationSummaryLoading();
+                    } else if (snapshot.hasError) {
+                      return _floodErrorCard(snapshot.error.toString());
+                    } else if (snapshot.hasData) {
+                      return _stationSummary(snapshot.data!);
+                    } else {
+                      return _floodErrorCard('No station data available.');
                     }
-                    if (snapshot.hasError) {
-                      return _floodDataErrorCard(snapshot.error.toString());
-                    }
-                    final stations = snapshot.data ?? [];
-                    final normalCount = stations.where((station) {
-                      return station.status.toLowerCase() == 'normal';
-                    }).length;
-                    return Column(
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _statCard(
-                                number: stations.length.toString(),
-                                title: 'Flood Stations',
-                                subtitle: 'Active monitoring',
-                                numberColor: const Color(0xFF4142C7),
-                                backgroundColor: const Color(0xFFF1F2FF),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _statCard(
-                                number: stations.where((station) {
-                                  return station.waterLevel >= 0;
-                                }).length.toString(),
-                                title: 'Water Level Stations',
-                                subtitle: 'Monitoring now',
-                                numberColor: const Color(0xFF16B86D),
-                                backgroundColor: const Color(0xFFEEFBF5),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        _normalStationsCard(
-                          normalCount,
-                          stations.isEmpty ? '-' : stations.first.lastUpdated,
-                        ),
-                      ],
-                    );
                   },
                 ),
 
@@ -419,7 +367,7 @@ class _DashboardState extends State<Dashboard> {
                       context,
                       MaterialPageRoute(
                         builder: (context) =>
-                        const SignOut(),
+                        const ProfilePage(),
                       ),
                     );
                   },
@@ -439,32 +387,40 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 
-  FloodStation _highestRiskStation(List<FloodStation> stations) {
-    int riskValue(String status) {
-      if (status.toLowerCase() == 'danger') return 4;
-      if (status.toLowerCase() == 'warning') return 3;
-      if (status.toLowerCase() == 'alert') return 2;
-      return 1;
+  Widget _warningCard(FloodStationSummary summary) {
+    final hasDanger = summary.dangerStations > 0;
+    final hasWarning = summary.warningStations > 0;
+    final hasAlert = summary.alertStations > 0;
+    final hasRisk = hasDanger || hasWarning || hasAlert;
+
+    String statusTitle = 'All Monitored Stations Safe';
+    String statusDetails = '${summary.normalStations} normal readings';
+    Color cardColor = const Color(0xFF16B86D);
+
+    if (hasDanger) {
+      statusTitle = 'Danger Water Level';
+      statusDetails = '${summary.dangerStations} station(s) in danger';
+      cardColor = const Color(0xFFF31646);
+    } else if (hasWarning) {
+      statusTitle = 'Water Level Warning';
+      statusDetails = '${summary.warningStations} station(s) at warning level';
+      cardColor = const Color(0xFFFF8A00);
+    } else if (hasAlert) {
+      statusTitle = 'Water Level Alert';
+      statusDetails = '${summary.alertStations} station(s) at alert level';
+      cardColor = const Color(0xFFF0B429);
     }
 
-    final sortedStations = List<FloodStation>.from(stations);
-    sortedStations.sort((first, second) {
-      return riskValue(second.status).compareTo(riskValue(first.status));
-    });
-    return sortedStations.first;
-  }
-
-  Widget _warningCard(FloodStation station) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
 
       decoration: BoxDecoration(
-        color: const Color(0xFFF31646),
+        color: cardColor,
         borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x33F31646),
+            color: cardColor.withValues(alpha: 0.20),
             blurRadius: 10,
             offset: Offset(0, 4),
           ),
@@ -473,8 +429,8 @@ class _DashboardState extends State<Dashboard> {
 
       child: Row(
         children: [
-          const Icon(
-            Icons.warning_amber_rounded,
+          Icon(
+            hasRisk ? Icons.warning_amber_rounded : Icons.check_circle_outline,
             color: Colors.white,
             size: 28,
           ),
@@ -486,9 +442,9 @@ class _DashboardState extends State<Dashboard> {
               crossAxisAlignment:
               CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Flood Monitoring',
-                  style: TextStyle(
+                Text(
+                  statusTitle,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
@@ -497,7 +453,7 @@ class _DashboardState extends State<Dashboard> {
                 const SizedBox(height: 3),
 
                 Text(
-                  station.stationName,
+                  statusDetails,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 13,
@@ -505,7 +461,7 @@ class _DashboardState extends State<Dashboard> {
                 ),
 
                 Text(
-                  '${station.riverBasin}, ${station.state}',
+                  '${summary.waterLevelStations} water-level stations monitored',
                   style: const TextStyle(
                     color: Color(0xFFFFD5DF),
                     fontSize: 12,
@@ -513,7 +469,7 @@ class _DashboardState extends State<Dashboard> {
                 ),
 
                 Text(
-                  '${station.status} • ${station.waterLevel} m • Updated ${station.lastUpdated}',
+                  'Updated: ${_formatLastUpdated(summary.lastUpdated)}',
                   style: const TextStyle(
                     color: Color(0xFFFFD5DF),
                     fontSize: 11,
@@ -532,8 +488,78 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 
+  String _formatLastUpdated(String value) {
+    if (value.isEmpty) {
+      return 'Not available';
+    }
+
+    final dateTime = DateTime.tryParse(value);
+    if (dateTime == null) {
+      return value;
+    }
+
+
+    String twoDigits(int number) => number.toString().padLeft(2, '0');
+
+    return '${twoDigits(dateTime.day)}/${twoDigits(dateTime.month)}/'
+        '${dateTime.year} ${twoDigits(dateTime.hour)}:'
+        '${twoDigits(dateTime.minute)}';
+  }
+
+  Widget _floodLoadingCard() {
+    return Container(
+      width: double.infinity,
+      height: 125,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: const Center(child: CircularProgressIndicator()),
+    );
+  }
+
+  Widget _floodErrorCard(String errorMessage) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFEBEE),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline, color: Colors.red),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Unable to load live flood data',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  errorMessage,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.grey, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refreshDashboard,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _searchBar() {
     return TextField(
+      readOnly: true,
+      onTap: _openSearchPage,
       decoration: InputDecoration(
         hintText: 'Search a river or station',
         hintStyle: const TextStyle(
@@ -701,7 +727,7 @@ class _DashboardState extends State<Dashboard> {
 
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _refreshData,
+            onPressed: _refreshWeather,
           ),
         ],
       ),
@@ -762,96 +788,119 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 
-  Widget _normalStationsCard(int normalStations, String lastUpdated) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-
-      decoration: BoxDecoration(
-        color: const Color(0xFFEEFBF5),
-        borderRadius: BorderRadius.circular(16),
-      ),
-
-      child: Row(
-        mainAxisAlignment:
-        MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment:
-            CrossAxisAlignment.start,
-            children: [
-              Text(
-                normalStations.toString(),
-                style: const TextStyle(
-                  color: Color(0xFF16B86D),
-                  fontSize: 25,
-                  fontWeight: FontWeight.bold,
-                ),
+  Widget _stationSummary(FloodStationSummary summary) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _statCard(
+                number: summary.floodStations.toString(),
+                title: 'Flood Stations',
+                subtitle: 'All JPS station types',
+                numberColor: const Color(0xFF4142C7),
+                backgroundColor: const Color(0xFFF1F2FF),
               ),
-              const Text(
-                'Normal Stations',
-                style: TextStyle(
-                  color: Color(0xFF16B86D),
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _statCard(
+                number: summary.waterLevelStations.toString(),
+                title: 'Water Level Stations',
+                subtitle: 'Monitoring now',
+                numberColor: const Color(0xFF16B86D),
+                backgroundColor: const Color(0xFFEEFBF5),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEEFBF5),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    summary.normalStations.toString(),
+                    style: const TextStyle(
+                      color: Color(0xFF16B86D),
+                      fontSize: 25,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Text(
+                    'Normal Stations',
+                    style: TextStyle(
+                      color: Color(0xFF16B86D),
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    '${summary.rainfallStations} rainfall stations',
+                    style: const TextStyle(color: Colors.grey, fontSize: 10),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  const Text(
+                    'Last Updated',
+                    style: TextStyle(color: Colors.grey, fontSize: 10),
+                  ),
+                  Text(
+                    _formatLastUpdated(summary.lastUpdated),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    '${summary.noLatestData} without latest reading',
+                    style: const TextStyle(color: Colors.grey, fontSize: 9),
+                  ),
+                ],
               ),
             ],
           ),
-
-          Column(
-            crossAxisAlignment:
-            CrossAxisAlignment.end,
-            children: [
-              const Text(
-                'Last Updated',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 10,
-                ),
-              ),
-              Text(
-                lastUpdated,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _dataLoadingCard() {
+  Widget _stationSummaryLoading() {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(child: _stationLoadingBox()),
+            const SizedBox(width: 12),
+            Expanded(child: _stationLoadingBox()),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _stationLoadingBox(),
+      ],
+    );
+  }
+
+  Widget _stationLoadingBox() {
     return Container(
-      width: double.infinity,
       height: 105,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.grey.shade200,
         borderRadius: BorderRadius.circular(16),
       ),
       child: const Center(child: CircularProgressIndicator()),
-    );
-  }
-
-  Widget _floodDataErrorCard(String message) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFEBEE),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.error_outline, color: Colors.red),
-          const SizedBox(width: 12),
-          Expanded(child: Text(message, style: const TextStyle(fontSize: 11))),
-          IconButton(onPressed: _refreshData, icon: const Icon(Icons.refresh)),
-        ],
-      ),
     );
   }
 
@@ -1014,60 +1063,71 @@ class _DashboardState extends State<Dashboard> {
   }
 
   Widget _reportFloodCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x10000000),
-            blurRadius: 8,
-            offset: Offset(0, 3),
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const ReportFloodPage(),
           ),
-        ],
-      ),
+        );
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
 
-      child: const Row(
-        children: [
-          Icon(
-            Icons.outlined_flag,
-            color: Color(0xFFFF174F),
-            size: 28,
-          ),
-
-          SizedBox(width: 12),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment:
-              CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Report Flood',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  'Notify authorities',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 10,
-                  ),
-                ),
-              ],
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x10000000),
+              blurRadius: 8,
+              offset: Offset(0, 3),
             ),
-          ),
+          ],
+        ),
 
-          CircleAvatar(
-            radius: 4,
-            backgroundColor: Color(0xFFFF174F),
-          ),
-        ],
+        child: const Row(
+          children: [
+            Icon(
+              Icons.outlined_flag,
+              color: Color(0xFFFF174F),
+              size: 28,
+            ),
+
+            SizedBox(width: 12),
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment:
+                CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Report Flood',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    'Notify authorities',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            CircleAvatar(
+              radius: 4,
+              backgroundColor: Color(0xFFFF174F),
+            ),
+          ],
+        ),
       ),
     );
   }
