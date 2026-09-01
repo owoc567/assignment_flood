@@ -1,13 +1,17 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 
 import 'forecast.dart';
+import 'alerts.dart';
 import 'flood_service.dart';
 import 'flood_station.dart';
 import 'Users/profile.dart';
 import 'reportflood.dart';
+import 'saved_rivers.dart';
 import 'search.dart';
 
 class Dashboard extends StatefulWidget {
@@ -21,14 +25,19 @@ class _DashboardState extends State<Dashboard> {
   Future<List<Forecast>>? forecastData;
   Future<FloodStationSummary>? floodData;
   final FloodService _floodService = FloodService();
+  String _weatherLocationName = 'Kuala Lumpur';
+  bool _isGettingLocation = false;
 
   @override
   void initState() {
     super.initState();
 
-    // St009 represents WP Kuala Lumpur.
+    // Show Kuala Lumpur first while the phone location is being obtained.
     forecastData = _fetchForecastData('St009');
     floodData = _floodService.fetchStationSummary();
+
+    // Replace Kuala Lumpur with the user's detected area when available.
+    _loadWeatherUsingCurrentLocation();
   }
 
   Future<List<Forecast>> _fetchForecastData(
@@ -65,20 +74,205 @@ class _DashboardState extends State<Dashboard> {
     }
   }
 
-  void _refreshWeather() {
-    setState(() {
-      forecastData = _fetchForecastData('St009');
-    });
+  Future<List<Forecast>> _fetchForecastByLocationName(
+      String locationName,
+      ) async {
+    final url = Uri.https(
+      'api.data.gov.my',
+      '/weather/forecast',
+      {
+        'contains': '$locationName@location__location_name',
+        'sort': 'date',
+      },
+    );
+
+    try {
+      final response = await http.get(url);
+      if (response.statusCode != 200) return [];
+
+      final jsonData = jsonDecode(response.body) as List;
+      return jsonData.map((json) => Forecast.fromJson(json)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  String _normaliseMalaysianLocation(String location) {
+    final name = location.trim().toLowerCase();
+
+    const replacements = <String, String>{
+      'wilayah persekutuan kuala lumpur': 'WP Kuala Lumpur',
+      'federal territory of kuala lumpur': 'WP Kuala Lumpur',
+      'kuala lumpur': 'WP Kuala Lumpur',
+      'wilayah persekutuan putrajaya': 'WP Putrajaya',
+      'federal territory of putrajaya': 'WP Putrajaya',
+      'putrajaya': 'WP Putrajaya',
+      'wilayah persekutuan labuan': 'WP Labuan',
+      'federal territory of labuan': 'WP Labuan',
+      'labuan': 'WP Labuan',
+      'penang': 'Pulau Pinang',
+      'pulau pinang': 'Pulau Pinang',
+      'malacca': 'Melaka',
+      'melaka': 'Melaka',
+      'johore': 'Johor',
+      'johor': 'Johor',
+    };
+
+    return replacements[name] ?? location.trim();
+  }
+
+  Future<void> _loadWeatherUsingCurrentLocation() async {
+    if (_isGettingLocation) return;
+    _isGettingLocation = true;
+
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw Exception('Please turn on your phone location.');
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied) {
+        throw Exception('Location permission was denied.');
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        throw Exception(
+          'Location permission is permanently denied. Enable it in Settings.',
+        );
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+
+      final geocoding = Geocoding();
+      final List<Placemark> placemarks =
+      await geocoding.placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isEmpty) {
+        throw Exception('Unable to identify your current area.');
+      }
+
+      final place = placemarks.first;
+      final detectedNames = <String>[
+        place.subLocality ?? '',
+        place.locality ?? '',
+        place.subAdministrativeArea ?? '',
+        place.administrativeArea ?? '',
+      ]
+          .map((name) => name.trim())
+          .where((name) => name.isNotEmpty)
+          .toSet()
+          .toList();
+
+      if (detectedNames.isEmpty) {
+        throw Exception('Unable to identify your current area.');
+      }
+
+      // Keep the smallest detected area for the card title, for example
+      // "Setapak Weather", even when MET Malaysia only provides a broader
+      // Kuala Lumpur forecast for that area.
+      final displayLocationName = detectedNames.first;
+
+      final candidates = detectedNames
+          .map(_normaliseMalaysianLocation)
+          .toSet()
+          .toList();
+
+      for (final locationName in candidates) {
+        final forecasts = await _fetchForecastByLocationName(locationName);
+        if (forecasts.isEmpty) continue;
+        if (!mounted) return;
+
+        setState(() {
+          _weatherLocationName = displayLocationName;
+          forecastData = Future.value(forecasts);
+        });
+        return;
+      }
+
+      // Setapak and some smaller Kuala Lumpur localities are not individual
+      // data.gov.my forecast locations. Use WP Kuala Lumpur's official
+      // forecast but retain the detected locality in the card title.
+      final administrativeArea = _normaliseMalaysianLocation(
+        place.administrativeArea ?? '',
+      );
+
+      if (administrativeArea == 'WP Kuala Lumpur') {
+        final forecasts = await _fetchForecastData('St009');
+        if (!mounted) return;
+
+        setState(() {
+          _weatherLocationName = displayLocationName;
+          forecastData = Future.value(forecasts);
+        });
+        return;
+      }
+
+      throw Exception('No government forecast matches your current area.');
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Using Kuala Lumpur weather. ${error.toString()}',
+          ),
+        ),
+      );
+    } finally {
+      _isGettingLocation = false;
+    }
+  }
+
+  Future<void> _refreshWeather() async {
+    await _loadWeatherUsingCurrentLocation();
+  }
+
+  String _translateWeather(String malayWeather) {
+    final weather = malayWeather.trim().toLowerCase();
+
+    const translations = <String, String>{
+      'berjerebu': 'Hazy',
+      'tiada hujan': 'No rain',
+      'hujan': 'Rain',
+      'hujan di beberapa tempat': 'Scattered rain',
+      'hujan di satu dua tempat': 'Isolated rain',
+      'hujan di satu dua tempat di kawasan pantai':
+      'Isolated rain over coastal areas',
+      'hujan di satu dua tempat di kawasan pedalaman':
+      'Isolated rain over inland areas',
+      'ribut petir': 'Thunderstorms',
+      'ribut petir di beberapa tempat': 'Scattered thunderstorms',
+      'ribut petir di beberapa tempat di kawasan pedalaman':
+      'Scattered thunderstorms over inland areas',
+      'ribut petir di satu dua tempat': 'Isolated thunderstorms',
+      'ribut petir di satu dua tempat di kawasan pantai':
+      'Isolated thunderstorms over coastal areas',
+      'ribut petir di satu dua tempat di kawasan pedalaman':
+      'Isolated thunderstorms over inland areas',
+    };
+
+    return translations[weather] ?? malayWeather;
   }
 
   Future<void> _refreshDashboard() async {
     setState(() {
-      forecastData = _fetchForecastData('St009');
       floodData = _floodService.fetchStationSummary();
     });
 
     await Future.wait([
-      forecastData!,
+      _loadWeatherUsingCurrentLocation(),
       floodData!,
     ]);
   }
@@ -88,6 +282,76 @@ class _DashboardState extends State<Dashboard> {
       context,
       MaterialPageRoute(
         builder: (context) => const SearchPage(),
+      ),
+    );
+  }
+
+  void _openAlertsPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AlertsPage(),
+      ),
+    ).then((_) => _refreshDashboard());
+  }
+
+  Widget _alertBadge({bool compact = false}) {
+    return FutureBuilder<FloodStationSummary>(
+      future: floodData,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const SizedBox.shrink();
+
+        final summary = snapshot.data!;
+        final count = summary.alertStations +
+            summary.warningStations +
+            summary.dangerStations;
+        if (count == 0) return const SizedBox.shrink();
+
+        if (compact) {
+          return const CircleAvatar(
+            radius: 4,
+            backgroundColor: Color(0xFFFF174F),
+          );
+        }
+
+        return Container(
+          constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          decoration: const BoxDecoration(
+            color: Color(0xFFFF174F),
+            borderRadius: BorderRadius.all(Radius.circular(10)),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            count > 99 ? '99+' : '$count',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _openWaterLevelStations(FloodStationSummary summary) {
+    StationFilter filter = StationFilter.all;
+
+    if (summary.dangerStations > 0) {
+      filter = StationFilter.danger;
+    } else if (summary.warningStations > 0) {
+      filter = StationFilter.warning;
+    } else if (summary.alertStations > 0) {
+      filter = StationFilter.alert;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SearchPage(
+          initialFilter: filter,
+        ),
       ),
     );
   }
@@ -139,15 +403,12 @@ class _DashboardState extends State<Dashboard> {
                   Icons.notifications_none,
                   color: Color(0xFF4A45D6),
                 ),
-                onPressed: () {},
+                onPressed: _openAlertsPage,
               ),
-              const Positioned(
+              Positioned(
                 right: 10,
                 top: 9,
-                child: CircleAvatar(
-                  radius: 4,
-                  backgroundColor: Color(0xFFFF174F),
-                ),
+                child: _alertBadge(compact: true),
               ),
             ],
           ),
@@ -269,7 +530,15 @@ class _DashboardState extends State<Dashboard> {
                         const Color(0xFF16B86D),
                         title: 'Saved rivers',
                         subtitle: 'Your watchlist',
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                              const SavedRiversPage(),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ],
@@ -324,22 +593,12 @@ class _DashboardState extends State<Dashboard> {
                         Icons.notifications_none,
                         color: Colors.grey,
                       ),
-                      onPressed: () {},
+                      onPressed: _openAlertsPage,
                     ),
-                    const Positioned(
+                    Positioned(
                       right: 5,
                       top: 2,
-                      child: CircleAvatar(
-                        radius: 8,
-                        backgroundColor: Colors.red,
-                        child: Text(
-                          '2',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                          ),
-                        ),
-                      ),
+                      child: _alertBadge(),
                     ),
                   ],
                 ),
@@ -411,79 +670,83 @@ class _DashboardState extends State<Dashboard> {
       cardColor = const Color(0xFFF0B429);
     }
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
+    return InkWell(
+      onTap: () => _openWaterLevelStations(summary),
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
 
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: cardColor.withValues(alpha: 0.20),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-
-      child: Row(
-        children: [
-          Icon(
-            hasRisk ? Icons.warning_amber_rounded : Icons.check_circle_outline,
-            color: Colors.white,
-            size: 28,
-          ),
-
-          const SizedBox(width: 12),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment:
-              CrossAxisAlignment.start,
-              children: [
-                Text(
-                  statusTitle,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                const SizedBox(height: 3),
-
-                Text(
-                  statusDetails,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                  ),
-                ),
-
-                Text(
-                  '${summary.waterLevelStations} water-level stations monitored',
-                  style: const TextStyle(
-                    color: Color(0xFFFFD5DF),
-                    fontSize: 12,
-                  ),
-                ),
-
-                Text(
-                  'Updated: ${_formatLastUpdated(summary.lastUpdated)}',
-                  style: const TextStyle(
-                    color: Color(0xFFFFD5DF),
-                    fontSize: 11,
-                  ),
-                ),
-              ],
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: cardColor.withValues(alpha: 0.20),
+              blurRadius: 10,
+              offset: Offset(0, 4),
             ),
-          ),
+          ],
+        ),
 
-          const Icon(
-            Icons.chevron_right,
-            color: Colors.white,
-          ),
-        ],
+        child: Row(
+          children: [
+            Icon(
+              hasRisk ? Icons.warning_amber_rounded : Icons.check_circle_outline,
+              color: Colors.white,
+              size: 28,
+            ),
+
+            const SizedBox(width: 12),
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment:
+                CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    statusTitle,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 3),
+
+                  Text(
+                    statusDetails,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                    ),
+                  ),
+
+                  Text(
+                    '${summary.waterLevelStations} water-level stations monitored',
+                    style: const TextStyle(
+                      color: Color(0xFFFFD5DF),
+                      fontSize: 12,
+                    ),
+                  ),
+
+                  Text(
+                    'Updated: ${_formatLastUpdated(summary.lastUpdated)}',
+                    style: const TextStyle(
+                      color: Color(0xFFFFD5DF),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const Icon(
+              Icons.chevron_right,
+              color: Colors.white,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -621,9 +884,9 @@ class _DashboardState extends State<Dashboard> {
               crossAxisAlignment:
               CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Kuala Lumpur Weather',
-                  style: TextStyle(
+                Text(
+                  '$_weatherLocationName Weather',
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
@@ -632,7 +895,7 @@ class _DashboardState extends State<Dashboard> {
                 const SizedBox(height: 3),
 
                 Text(
-                  forecast.summaryForecast,
+                  _translateWeather(forecast.summaryForecast),
                   style: const TextStyle(
                     color: Colors.grey,
                     fontSize: 12,
@@ -967,96 +1230,110 @@ class _DashboardState extends State<Dashboard> {
   void _showWeatherDetails() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      enableDrag: false,
       showDragHandle: true,
 
       builder: (BuildContext context) {
-        return FutureBuilder<List<Forecast>>(
-          future: forecastData,
+        return SafeArea(
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.82,
+            child: FutureBuilder<List<Forecast>>(
+              future: forecastData,
 
-          builder: (context, snapshot) {
-            if (snapshot.connectionState ==
-                ConnectionState.waiting) {
-              return const SizedBox(
-                height: 250,
-                child: Center(
-                  child: CircularProgressIndicator(),
-                ),
-              );
-            }
-
-            if (snapshot.hasError) {
-              return SizedBox(
-                height: 250,
-                child: Center(
-                  child: Text(
-                    'Error: ${snapshot.error}',
-                  ),
-                ),
-              );
-            }
-
-            if (!snapshot.hasData ||
-                snapshot.data!.isEmpty) {
-              return const SizedBox(
-                height: 250,
-                child: Center(
-                  child: Text(
-                    'No forecast data available',
-                  ),
-                ),
-              );
-            }
-
-            final forecasts = snapshot.data!;
-
-            return SizedBox(
-              height: 450,
-              child: Column(
-                children: [
-                  const Text(
-                    'Kuala Lumpur 7-Day Forecast',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState ==
+                    ConnectionState.waiting) {
+                  return const SizedBox(
+                    height: 250,
+                    child: Center(
+                      child: CircularProgressIndicator(),
                     ),
-                  ),
+                  );
+                }
 
-                  const SizedBox(height: 10),
+                if (snapshot.hasError) {
+                  return SizedBox(
+                    height: 250,
+                    child: Center(
+                      child: Text(
+                        'Error: ${snapshot.error}',
+                      ),
+                    ),
+                  );
+                }
 
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: forecasts.length,
-                      itemBuilder: (context, index) {
-                        final forecast =
-                        forecasts[index];
+                if (!snapshot.hasData ||
+                    snapshot.data!.isEmpty) {
+                  return const SizedBox(
+                    height: 250,
+                    child: Center(
+                      child: Text(
+                        'No forecast data available',
+                      ),
+                    ),
+                  );
+                }
 
-                        return ListTile(
-                          leading: const Icon(
-                            Icons.cloud_outlined,
-                            color: Color(0xFF514BD6),
-                          ),
-                          title: Text(
-                            forecast.date,
-                          ),
-                          subtitle: Text(
-                            forecast.summaryForecast,
-                          ),
-                          trailing: Text(
-                            '${forecast.minTemp}°C - '
-                                '${forecast.maxTemp}°C',
-                            style: const TextStyle(
-                              fontWeight:
-                              FontWeight.bold,
+                final forecasts = snapshot.data!;
+
+                return SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.72,
+                  child: Column(
+                    children: [
+                      Text(
+                        '$_weatherLocationName 7-Day Forecast',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      Expanded(
+                        child: Scrollbar(
+                          thumbVisibility: true,
+                          child: ListView.builder(
+                            physics: const BouncingScrollPhysics(
+                              parent: AlwaysScrollableScrollPhysics(),
                             ),
+                            padding: const EdgeInsets.only(bottom: 30),
+                            itemCount: forecasts.length,
+                            itemBuilder: (context, index) {
+                              final forecast =
+                              forecasts[index];
+
+                              return ListTile(
+                                leading: const Icon(
+                                  Icons.cloud_outlined,
+                                  color: Color(0xFF514BD6),
+                                ),
+                                title: Text(
+                                  forecast.date,
+                                ),
+                                subtitle: Text(
+                                  _translateWeather(forecast.summaryForecast),
+                                ),
+                                trailing: Text(
+                                  '${forecast.minTemp}°C - '
+                                      '${forecast.maxTemp}°C',
+                                  style: const TextStyle(
+                                    fontWeight:
+                                    FontWeight.bold,
+                                  ),
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            );
-          },
+                );
+              },
+            ),
+          ),
         );
       },
     );

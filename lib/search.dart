@@ -5,9 +5,10 @@ import 'package:flutter/material.dart';
 
 import 'flood_service.dart';
 import 'flood_station.dart';
+import 'station_details.dart';
 
 /// Filter options shown as chips at the top of the search page.
-enum StationFilter { all, danger, alert, normal }
+enum StationFilter { all, danger, warning, alert, normal }
 
 extension StationFilterLabel on StationFilter {
   String get label {
@@ -16,6 +17,8 @@ extension StationFilterLabel on StationFilter {
         return 'All';
       case StationFilter.danger:
         return 'Danger';
+      case StationFilter.warning:
+        return 'Warning';
       case StationFilter.alert:
         return 'Alert';
       case StationFilter.normal:
@@ -31,11 +34,13 @@ class SearchPage extends StatefulWidget {
   /// falls back to sorting alphabetically by station name.
   final double? userLat;
   final double? userLng;
+  final StationFilter initialFilter;
 
   const SearchPage({
     super.key,
     this.userLat,
     this.userLng,
+    this.initialFilter = StationFilter.all,
   });
 
   @override
@@ -68,6 +73,7 @@ class _SearchPageState extends State<SearchPage> {
   @override
   void initState() {
     super.initState();
+    _selectedFilter = widget.initialFilter;
     _loadStations();
     _searchController.addListener(_onSearchChanged);
     _autoRefreshTimer = Timer.periodic(
@@ -217,11 +223,11 @@ class _SearchPageState extends State<SearchPage> {
     switch (filter) {
       case StationFilter.danger:
         return normalized.contains('danger') || normalized.contains('bahaya');
+      case StationFilter.warning:
+        return normalized.contains('warning') ||
+            normalized.contains('waspada');
       case StationFilter.alert:
-        return normalized.contains('alert') ||
-            normalized.contains('warning') ||
-            normalized.contains('waspada') ||
-            normalized.contains('amaran');
+        return normalized.contains('alert') || normalized.contains('amaran');
       case StationFilter.normal:
         return normalized.contains('normal');
       case StationFilter.all:
@@ -406,6 +412,10 @@ class _SearchPageState extends State<SearchPage> {
     return RefreshIndicator(
       onRefresh: _loadStations,
       child: ListView.separated(
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
+        padding: const EdgeInsets.only(bottom: 30),
         itemCount: _filteredStations.length,
         separatorBuilder: (_, __) => const Divider(height: 1),
         itemBuilder: (context, index) {
@@ -463,7 +473,14 @@ class _SearchPageState extends State<SearchPage> {
         ],
       ),
       onTap: () {
-        // TODO: navigate to a station detail page if you have one.
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => StationDetailsPage(
+              station: station,
+            ),
+          ),
+        );
       },
     );
   }
