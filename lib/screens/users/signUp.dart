@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:assignment_flood/Users/signIn.dart';
+import 'package:assignment_flood/screens/users/signIn.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';

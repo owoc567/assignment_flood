@@ -3,8 +3,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import 'flood_service.dart';
-import 'flood_station.dart';
+import '../../services/flood_service.dart';
+import '../../models/flood_station.dart';
 import 'station_details.dart';
 
 /// Filter options shown as chips at the top of the search page.

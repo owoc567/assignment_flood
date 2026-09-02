@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'flood_service.dart';
-import 'flood_station.dart';
-import 'saved_station_service.dart';
-import 'station_details.dart';
+import '../../services/flood_service.dart';
+import '../../models/flood_station.dart';
+import '../../services/saved_station_service.dart';
+import '../stations/station_details.dart';
 
 class AlertsPage extends StatefulWidget {
   const AlertsPage({super.key});

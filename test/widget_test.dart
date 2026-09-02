@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:assignment_flood/main.dart';
-import 'package:assignment_flood/Users/signIn.dart';
+import 'package:assignment_flood/screens/users/signIn.dart';
 
 void main() {
   testWidgets('Get Started button navigates to SignIn', (WidgetTester tester) async {

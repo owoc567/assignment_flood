@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'flood_station.dart';
-import 'saved_station_service.dart';
+import '../../models/flood_station.dart';
+import '../../services/saved_station_service.dart';
 
 class StationDetailsPage extends StatefulWidget {
   final FloodStation station;

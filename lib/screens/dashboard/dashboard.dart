@@ -5,14 +5,15 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 
-import 'forecast.dart';
-import 'alerts.dart';
-import 'flood_service.dart';
-import 'flood_station.dart';
-import 'Users/profile.dart';
-import 'reportflood.dart';
-import 'saved_rivers.dart';
-import 'search.dart';
+import '../weather/forecast.dart';
+import '../alerts/alerts.dart';
+import '../../services/flood_service.dart';
+import '../../models/flood_station.dart';
+import '../users/profile.dart';
+import '../reports/reportFlood.dart';
+import '../stations/saved_rivers.dart';
+import '../stations/search.dart';
+import '../alerts/notification.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -295,6 +296,15 @@ class _DashboardState extends State<Dashboard> {
     ).then((_) => _refreshDashboard());
   }
 
+  void _openNotificationsPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const NotificationsPage(),
+      ),
+    );
+  }
+
   Widget _alertBadge({bool compact = false}) {
     return FutureBuilder<FloodStationSummary>(
       future: floodData,
@@ -356,21 +366,198 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 
+  Widget _buildSideBar() {
+    return Drawer(
+      backgroundColor: Colors.white,
+      child: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: const BoxDecoration(
+                color: Color(0xFF4A45D6),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    radius: 32,
+                    backgroundColor: Colors.white,
+                    child: Icon(
+                      Icons.water_drop,
+                      size: 36,
+                      color: Color(0xFF4A45D6),
+                    ),
+                  ),
+                  SizedBox(height: 14),
+                  Text(
+                    'MyFlood Malaysia',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Flood Monitoring System',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                children: [
+                  ListTile(
+                    leading: const Icon(
+                      Icons.home_outlined,
+                      color: Color(0xFF4A45D6),
+                    ),
+                    title: const Text('Home'),
+                    onTap: () {
+                      Navigator.pop(context);
+                    },
+                  ),
+
+                  ListTile(
+                    leading: const Icon(Icons.search),
+                    title: const Text('Search Stations'),
+                    onTap: () {
+                      Navigator.pop(context);
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SearchPage(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  ListTile(
+                    leading: const Icon(Icons.bookmark_outline),
+                    title: const Text('Saved Rivers'),
+                    onTap: () {
+                      Navigator.pop(context);
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                          const SavedRiversPage(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  ListTile(
+                    leading: const Icon(Icons.assignment_outlined),
+                    title: const Text('Report Flood'),
+                    onTap: () {
+                      Navigator.pop(context);
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                          const ReportFloodPage(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const Divider(),
+
+                  ListTile(
+                    leading: const Icon(
+                      Icons.warning_amber_rounded,
+                      color: Colors.orange,
+                    ),
+                    title: const Text('Active Alerts'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _openAlertsPage();
+                    },
+                  ),
+
+                  ListTile(
+                    leading: const Icon(
+                      Icons.notifications_outlined,
+                      color: Color(0xFF4A45D6),
+                    ),
+                    title: const Text('Notifications'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _openNotificationsPage();
+                    },
+                  ),
+
+                  const Divider(),
+
+                  ListTile(
+                    leading: const Icon(Icons.person_outline),
+                    title: const Text('My Profile'),
+                    onTap: () {
+                      Navigator.pop(context);
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                          const ProfilePage(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'MyFlood Malaysia v1.0',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
+      drawer: _buildSideBar(),
 
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
 
-        leading: IconButton(
-          icon: const Icon(
-            Icons.menu,
-            color: Color(0xFF4A45D6),
-          ),
-          onPressed: () {},
+        leading: Builder(
+          builder: (context){
+            return IconButton(
+              icon: const Icon(
+                Icons.menu,
+                color: Color(0xFF4A45D6),
+              ),
+              onPressed: () {
+                Scaffold.of(context).openDrawer();
+              },
+            );
+          },
         ),
 
         title: const Column(
@@ -403,7 +590,7 @@ class _DashboardState extends State<Dashboard> {
                   Icons.notifications_none,
                   color: Color(0xFF4A45D6),
                 ),
-                onPressed: _openAlertsPage,
+                onPressed: _openNotificationsPage,
               ),
               Positioned(
                 right: 10,
