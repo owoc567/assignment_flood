@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'notification_database_service.dart';
+import 'notification_model.dart';
+
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
 
@@ -8,29 +11,77 @@ class NotificationsPage extends StatefulWidget {
 }
 
 class _NotificationsPageState extends State<NotificationsPage> {
-  final List<Map<String, dynamic>> _notifications = [
-    {
-      'title': 'Water level alert',
-      'message': 'The water level at Sungai Klang has reached Alert level.',
-      'time': '5 minutes ago',
-      'level': 'alert',
-      'isRead': false,
-    },
-    {
-      'title': 'Heavy rainfall detected',
-      'message': 'Heavy rainfall was recorded near your saved station.',
-      'time': '30 minutes ago',
-      'level': 'warning',
-      'isRead': false,
-    },
-    {
-      'title': 'Water level returned to normal',
-      'message': 'The water level at Sungai Gombak is now normal.',
-      'time': '2 hours ago',
-      'level': 'normal',
-      'isRead': true,
-    },
-  ];
+  final NotificationDatabaseService _databaseService =
+  NotificationDatabaseService();
+
+  List<NotificationModel> _notifications = [];
+
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotifications();
+  }
+
+  // Retrieve notifications from SQLite
+  Future<void> _loadNotifications() async {
+    List<NotificationModel> notifications =
+    await _databaseService.getNotifications();
+
+    // Insert sample notifications when database is empty
+    if (notifications.isEmpty) {
+      await _insertSampleNotifications();
+
+      notifications =
+      await _databaseService.getNotifications();
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _notifications = notifications;
+      _isLoading = false;
+    });
+  }
+
+  // Initial notification data for testing
+  Future<void> _insertSampleNotifications() async {
+    await _databaseService.insertNotification(
+      NotificationModel(
+        title: 'Water level alert',
+        message:
+        'The water level at Sungai Klang has reached Alert level.',
+        time: '5 minutes ago',
+        level: 'alert',
+        isRead: false,
+      ),
+    );
+
+    await _databaseService.insertNotification(
+      NotificationModel(
+        title: 'Heavy rainfall detected',
+        message:
+        'Heavy rainfall was recorded near your saved station.',
+        time: '30 minutes ago',
+        level: 'warning',
+        isRead: false,
+      ),
+    );
+
+    await _databaseService.insertNotification(
+      NotificationModel(
+        title: 'Water level returned to normal',
+        message:
+        'The water level at Sungai Gombak is now normal.',
+        time: '2 hours ago',
+        level: 'normal',
+        isRead: true,
+      ),
+    );
+  }
 
   IconData _getIcon(String level) {
     if (level == 'alert') {
@@ -52,18 +103,38 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
   }
 
-  void _markAllAsRead() {
-    setState(() {
-      for (final notification in _notifications) {
-        notification['isRead'] = true;
-      }
-    });
+  // Mark one notification as read
+  Future<void> _markAsRead(NotificationModel notification) async {
+    if (notification.isRead || notification.id == null) {
+      return;
+    }
+
+    await _databaseService.markAsRead(notification.id!);
+    await _loadNotifications();
+  }
+
+  // Mark all notifications as read
+  Future<void> _markAllAsRead() async {
+    await _databaseService.markAllAsRead();
+    await _loadNotifications();
+  }
+
+  // Delete one notification
+  Future<void> _deleteNotification(
+      NotificationModel notification,
+      ) async {
+    if (notification.id == null) {
+      return;
+    }
+
+    await _databaseService.deleteNotification(notification.id!);
+    await _loadNotifications();
   }
 
   @override
   Widget build(BuildContext context) {
     final unreadCount = _notifications
-        .where((notification) => notification['isRead'] == false)
+        .where((notification) => !notification.isRead)
         .length;
 
     return Scaffold(
@@ -81,8 +152,19 @@ class _NotificationsPageState extends State<NotificationsPage> {
             ),
         ],
       ),
-      body: _notifications.isEmpty
-          ? const Center(
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (_notifications.isEmpty) {
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -100,70 +182,96 @@ class _NotificationsPageState extends State<NotificationsPage> {
               ),
             ),
             SizedBox(height: 6),
-            Text('Your water-level updates will appear here.'),
+            Text(
+              'Your water-level updates will appear here.',
+            ),
           ],
         ),
-      )
-          : ListView.builder(
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadNotifications,
+      child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: _notifications.length,
         itemBuilder: (context, index) {
           final notification = _notifications[index];
-          final level = notification['level'] as String;
-          final isRead = notification['isRead'] as bool;
-          final color = _getColor(level);
+          final color = _getColor(notification.level);
 
-          return Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            color: isRead ? Colors.white : color.withOpacity(0.08),
-            child: ListTile(
-              contentPadding: const EdgeInsets.all(14),
-              leading: CircleAvatar(
-                backgroundColor: color.withOpacity(0.15),
-                child: Icon(
-                  _getIcon(level),
-                  color: color,
-                ),
+          return Dismissible(
+            key: ValueKey(notification.id),
+            direction: DismissDirection.endToStart,
+            onDismissed: (direction) {
+              _deleteNotification(notification);
+            },
+            background: Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.only(right: 20),
+              alignment: Alignment.centerRight,
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(12),
               ),
-              title: Text(
-                notification['title'],
-                style: TextStyle(
-                  fontWeight:
-                  isRead ? FontWeight.normal : FontWeight.bold,
-                ),
+              child: const Icon(
+                Icons.delete,
+                color: Colors.white,
               ),
-              subtitle: Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(notification['message']),
-                    const SizedBox(height: 6),
-                    Text(
-                      notification['time'],
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontSize: 12,
+            ),
+            child: Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              color: notification.isRead
+                  ? Colors.white
+                  : color.withOpacity(0.08),
+              child: ListTile(
+                contentPadding: const EdgeInsets.all(14),
+                leading: CircleAvatar(
+                  backgroundColor: color.withOpacity(0.15),
+                  child: Icon(
+                    _getIcon(notification.level),
+                    color: color,
+                  ),
+                ),
+                title: Text(
+                  notification.title,
+                  style: TextStyle(
+                    fontWeight: notification.isRead
+                        ? FontWeight.normal
+                        : FontWeight.bold,
+                  ),
+                ),
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Column(
+                    crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+                      Text(notification.message),
+                      const SizedBox(height: 6),
+                      Text(
+                        notification.time,
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              trailing: isRead
-                  ? null
-                  : Container(
-                width: 9,
-                height: 9,
-                decoration: const BoxDecoration(
-                  color: Colors.blue,
-                  shape: BoxShape.circle,
+                trailing: notification.isRead
+                    ? null
+                    : Container(
+                  width: 9,
+                  height: 9,
+                  decoration: const BoxDecoration(
+                    color: Colors.blue,
+                    shape: BoxShape.circle,
+                  ),
                 ),
+                onTap: () {
+                  _markAsRead(notification);
+                },
               ),
-              onTap: () {
-                setState(() {
-                  notification['isRead'] = true;
-                });
-              },
             ),
           );
         },
