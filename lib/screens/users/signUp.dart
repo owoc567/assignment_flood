@@ -168,6 +168,7 @@ class _SignUpState extends State<SignUp> {
         'full_name': _usernameController.text.trim(),
         'phone_number': null,
         'profile_image_url': profileImageUrl,
+        'role': 'user',
       });
 
       // Return to the Sign In page after registration.

@@ -14,6 +14,7 @@ import '../reports/reportFlood.dart';
 import '../stations/saved_rivers.dart';
 import '../stations/search.dart';
 import '../alerts/notification.dart';
+import '../users/community.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -473,6 +474,25 @@ class _DashboardState extends State<Dashboard> {
                     },
                   ),
 
+                  ListTile(
+                    leading: const Icon(
+                      Icons.forum_outlined,
+                      color: Color(0xFF4A45D6),
+                    ),
+                    title: const Text('Community'),
+                    subtitle: const Text('Flood discussions and warnings'),
+                    onTap: () {
+                      Navigator.pop(context);
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CommunityPage(),
+                        ),
+                      );
+                    },
+                  ),
+
                   const Divider(),
 
                   ListTile(
@@ -519,6 +539,9 @@ class _DashboardState extends State<Dashboard> {
                 ],
               ),
             ),
+
+
+
 
             const Padding(
               padding: EdgeInsets.all(16),
@@ -733,7 +756,45 @@ class _DashboardState extends State<Dashboard> {
 
                 const SizedBox(height: 12),
 
-                _reportFloodCard(),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _actionCard(
+                        icon: Icons.forum_outlined,
+                        iconColor: const Color(0xFF4A45D6),
+                        title: 'Community',
+                        subtitle: 'Share flood updates',
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const CommunityPage(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    Expanded(
+                      child: _actionCard(
+                        icon: Icons.assignment_outlined,
+                        iconColor: Colors.orange,
+                        title: 'Report flood',
+                        subtitle: 'Submit a flood report',
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ReportFloodPage(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

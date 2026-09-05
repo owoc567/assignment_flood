@@ -95,10 +95,17 @@ class _SignInState extends State<SignIn> {
             .eq('id', user.id)
             .single();
 
-        role = (profile['role'] as String?) ?? 'user';
+        role = profile['role']
+            ?.toString()
+            .trim()
+            .toLowerCase() ??
+            'user';
+
+        debugPrint('Logged-in user ID: ${user.id}');
+        debugPrint('Role received: $role');
       } catch (e) {
-        // If the role lookup fails for any reason, default to a normal user.
         debugPrint('Error fetching role: $e');
+        throw Exception('Unable to retrieve account role: $e');
       }
 
       if (!mounted) {
@@ -129,7 +136,8 @@ class _SignInState extends State<SignIn> {
       if (!mounted) {
         return;
       }
-      _showMessage('Unable to sign in. Please try again.');
+      debugPrint('SIGN-IN ERROR: $e');
+      _showMessage(e.toString());
     } finally {
       if (mounted) {
         setState(() {
