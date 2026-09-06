@@ -15,6 +15,9 @@ import '../stations/saved_rivers.dart';
 import '../stations/search.dart';
 import '../alerts/notification.dart';
 import '../users/community.dart';
+import '../../services/rainfall_service.dart';
+import '../../models/rainfall_station.dart';
+import '../stations/heavy_rain_stations.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -27,6 +30,8 @@ class _DashboardState extends State<Dashboard> {
   Future<List<Forecast>>? forecastData;
   Future<FloodStationSummary>? floodData;
   final FloodService _floodService = FloodService();
+  final RainfallService _rainfallService = RainfallService();
+  Future<List<RainfallStation>>? heavyRainData;
   String _weatherLocationName = 'Kuala Lumpur';
   bool _isGettingLocation = false;
 
@@ -37,6 +42,7 @@ class _DashboardState extends State<Dashboard> {
     // Show Kuala Lumpur first while the phone location is being obtained.
     forecastData = _fetchForecastData('St009');
     floodData = _floodService.fetchStationSummary();
+    heavyRainData =_rainfallService.fetchRainfallStations();
 
     // Replace Kuala Lumpur with the user's detected area when available.
     _loadWeatherUsingCurrentLocation();
@@ -1251,50 +1257,74 @@ class _DashboardState extends State<Dashboard> {
     required String subtitle,
     required Color numberColor,
     required Color backgroundColor,
+    VoidCallback? onTap,
+    IconData? icon,
   }) {
-    return Container(
-      height: 105,
-      padding: const EdgeInsets.all(14),
-
-      decoration: BoxDecoration(
-        color: backgroundColor,
+    return Material(
+      color: backgroundColor,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-      ),
-
-      child: Column(
-        crossAxisAlignment:
-        CrossAxisAlignment.start,
-        mainAxisAlignment:
-        MainAxisAlignment.center,
-        children: [
-          Text(
-            number,
-            style: TextStyle(
-              color: numberColor,
-              fontSize: 25,
-              fontWeight: FontWeight.bold,
-            ),
+        child: Container(
+          height: 105,
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Row(
+                children: [
+                  if (icon != null) ...[
+                    Icon(
+                      icon,
+                      color: numberColor,
+                      size: 21,
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  Text(
+                    number,
+                    style: TextStyle(
+                      color: numberColor,
+                      fontSize: 25,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                title,
+                style: TextStyle(
+                  color: numberColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      subtitle,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                  if (onTap != null)
+                    const Icon(
+                      Icons.chevron_right,
+                      color: Colors.grey,
+                      size: 16,
+                    ),
+                ],
+              ),
+            ],
           ),
-
-          Text(
-            title,
-            style: TextStyle(
-              color: numberColor,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-
-          const SizedBox(height: 3),
-
-          Text(
-            subtitle,
-            style: const TextStyle(
-              color: Colors.grey,
-              fontSize: 11,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1315,12 +1345,31 @@ class _DashboardState extends State<Dashboard> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _statCard(
-                number: summary.waterLevelStations.toString(),
-                title: 'Water Level Stations',
-                subtitle: 'Monitoring now',
-                numberColor: const Color(0xFF16B86D),
-                backgroundColor: const Color(0xFFEEFBF5),
+              child: FutureBuilder<List<RainfallStation>>(
+                future: heavyRainData,
+                builder: (context, snapshot) {
+                  final count = snapshot.data?.length ?? 0;
+
+                  return _statCard(
+                    number: snapshot.connectionState == ConnectionState.waiting
+                        ? '...'
+                        :count.toString(),
+                    title: 'Rainfall Stations',
+                    subtitle: 'Live and 6-day history',
+                    icon: Icons.thunderstorm_outlined,
+                    numberColor: const Color(0xFFF28C28),
+                    backgroundColor: const Color(0xFFFFF4E5),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                          const HeavyRainStationsPage(),
+                        ),
+                      );
+                    },
+                  );
+                },
               ),
             ),
           ],
@@ -1356,8 +1405,11 @@ class _DashboardState extends State<Dashboard> {
                     ),
                   ),
                   Text(
-                    '${summary.rainfallStations} rainfall stations',
-                    style: const TextStyle(color: Colors.grey, fontSize: 10),
+                    '${summary.waterLevelStations} water-level stations checked',
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 10,
+                    ),
                   ),
                 ],
               ),

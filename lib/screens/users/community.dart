@@ -24,6 +24,8 @@ class _CommunityPageState extends State<CommunityPage> {
   final Map<dynamic, int> _likeCounts = {};
   final Map<dynamic, int> _dislikeCounts = {};
   final Map<dynamic, String> _myReactions = {};
+  final Map<dynamic, int> _replyCounts = {};
+  final Map<dynamic, int> _visibleReplyCounts = {};
 
   bool _isUpdatingReaction = false;
   final Set<dynamic> _expandedCommentPosts = {};
@@ -71,7 +73,9 @@ class _CommunityPageState extends State<CommunityPage> {
           .toSet()
           .toList();
 
-      _profiles.clear();
+      // Do not clear this map here. It also contains profiles loaded for
+      // inline replies. Clearing it would make reply names fall back to
+      // "Community User" whenever the post list refreshes.
       final postIds = posts
           .map((post) => post['id'])
           .where((id) => id != null)
@@ -80,6 +84,7 @@ class _CommunityPageState extends State<CommunityPage> {
       _likeCounts.clear();
       _dislikeCounts.clear();
       _myReactions.clear();
+      _replyCounts.clear();
 
       if (postIds.isNotEmpty) {
         final reactionResponse = await _supabase
@@ -112,6 +117,21 @@ class _CommunityPageState extends State<CommunityPage> {
               reactionType != null) {
             _myReactions[postId] = reactionType;
           }
+        }
+
+        // Load the total number of replies for every post so the count can be
+        // displayed before the replies are expanded.
+        final commentCountResponse = await _supabase
+            .from('community_comments')
+            .select('post_id')
+            .inFilter('post_id', postIds);
+
+        final allComments =
+        List<Map<String, dynamic>>.from(commentCountResponse);
+
+        for (final comment in allComments) {
+          final postId = comment['post_id'];
+          _replyCounts[postId] = (_replyCounts[postId] ?? 0) + 1;
         }
       }
 
@@ -552,6 +572,7 @@ class _CommunityPageState extends State<CommunityPage> {
     if (_expandedCommentPosts.contains(postId)) {
       setState(() {
         _expandedCommentPosts.remove(postId);
+        _visibleReplyCounts.remove(postId);
       });
 
       return;
@@ -559,9 +580,16 @@ class _CommunityPageState extends State<CommunityPage> {
 
     setState(() {
       _expandedCommentPosts.add(postId);
+      _visibleReplyCounts[postId] = 3;
     });
 
     await _loadInlineComments(postId);
+  }
+
+  void _showAllReplies(dynamic postId) {
+    setState(() {
+      _visibleReplyCounts[postId] = _inlineComments[postId]?.length ?? 0;
+    });
   }
 
   Future<void> _loadInlineComments(dynamic postId) async {
@@ -915,7 +943,7 @@ class _CommunityPageState extends State<CommunityPage> {
                     color: Color(0xFF252532),
                   ),
                 ),
-                 if (postType == 'Flood Report' && !isVerified)  ...[
+                if (postType == 'Flood Report' && !isVerified)  ...[
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -951,8 +979,8 @@ class _CommunityPageState extends State<CommunityPage> {
             ),
           ),
           _buildReactionBar(
-              post['id'],
-              title,
+            post['id'],
+            title,
           ),
           _buildInlineComments(
             post['id'],
@@ -973,6 +1001,8 @@ class _CommunityPageState extends State<CommunityPage> {
 
     final hasLiked = myReaction == 'like';
     final hasDisliked = myReaction == 'dislike';
+    final replyCount = _replyCounts[postId] ?? 0;
+    final repliesExpanded = _expandedCommentPosts.contains(postId);
 
     return Container(
       decoration: const BoxDecoration(
@@ -1031,7 +1061,20 @@ class _CommunityPageState extends State<CommunityPage> {
           ),
           const Spacer(),
           TextButton.icon(
-            onPressed: ()  {
+            onPressed: replyCount == 0
+                ? () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CommunityCommentsPage(
+                    postId: postId,
+                    postTitle: postTitle,
+                  ),
+                ),
+              );
+              await _loadPosts();
+            }
+                : () {
               _toggleComments(postId);
             },
             style: TextButton.styleFrom(
@@ -1042,9 +1085,11 @@ class _CommunityPageState extends State<CommunityPage> {
               size: 18,
             ),
             label: Text(
-              _expandedCommentPosts.contains(postId)
-                  ? 'Hide'
-                  : 'Comments',
+              repliesExpanded
+                  ? 'Hide replies'
+                  : replyCount == 0
+                  ? 'Add reply'
+                  : 'View $replyCount ${replyCount == 1 ? 'reply' : 'replies'}',
             ),
           ),
         ],
@@ -1092,6 +1137,9 @@ class _CommunityPageState extends State<CommunityPage> {
 
     final comments =
         _inlineComments[postId] ?? [];
+    final visibleCount = _visibleReplyCounts[postId] ?? 3;
+    final visibleComments = comments.take(visibleCount).toList();
+    final remainingCount = comments.length - visibleComments.length;
 
     return Container(
       width: double.infinity,
@@ -1107,30 +1155,6 @@ class _CommunityPageState extends State<CommunityPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Text(
-                'Comments',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Spacer(),
-              TextButton(
-                onPressed: () {
-                  _toggleComments(postId);
-                },
-                child: const Text(
-                  'Hide',
-                  style: TextStyle(
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ],
-          ),
-
           if (isLoading)
             const Padding(
               padding: EdgeInsets.all(18),
@@ -1155,7 +1179,7 @@ class _CommunityPageState extends State<CommunityPage> {
               ),
             )
           else
-            ...comments.map((comment) {
+            ...visibleComments.map((comment) {
               final userId =
                   comment['user_id']?.toString() ?? '';
 
@@ -1236,6 +1260,42 @@ class _CommunityPageState extends State<CommunityPage> {
               );
             }),
 
+          if (!isLoading && remainingCount > 0)
+            TextButton(
+              onPressed: () {
+                _showAllReplies(postId);
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.grey.shade700,
+                padding: EdgeInsets.zero,
+              ),
+              child: Text(
+                'View $remainingCount more',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+
+          if (!isLoading && comments.isNotEmpty && remainingCount == 0)
+            TextButton(
+              onPressed: () {
+                _toggleComments(postId);
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.grey.shade700,
+                padding: EdgeInsets.zero,
+              ),
+              child: const Text(
+                'Hide replies',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -1251,13 +1311,16 @@ class _CommunityPageState extends State<CommunityPage> {
                   ),
                 );
 
+                // Refresh the post/reply count first, then load reply profiles
+                // last so their usernames remain available inline.
+                await _loadPosts();
                 await _loadInlineComments(postId);
               },
               icon: const Icon(
                 Icons.edit_outlined,
                 size: 17,
               ),
-              label: const Text('Write a Comment'),
+              label: const Text('Write a Reply'),
             ),
           ),
         ],

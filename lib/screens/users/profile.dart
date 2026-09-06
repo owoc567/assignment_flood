@@ -16,6 +16,7 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   bool _isLoading = true;
   bool _isLoggingOut = false;
+  bool _isDeletingAccount = false;
 
   String? _fullName;
   String? _profileImageUrl;
@@ -91,6 +92,50 @@ class _ProfilePageState extends State<ProfilePage> {
       setState(() {
         _isLoggingOut = false;
       });
+    }
+  }
+
+  Future<void> _deleteAccount() async {
+    setState(() {
+      _isDeletingAccount = true;
+    });
+
+    try {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+
+      if (user == null) return;
+
+      // Delete the user's profile record
+      await supabase
+          .from('profiles')
+          .delete()
+          .eq('id', user.id);
+
+      // Sign out after deleting profile data
+      await supabase.auth.signOut();
+
+      if (!mounted) return;
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const SignIn(),
+        ),
+            (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isDeletingAccount = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Delete account failed: $e'),
+        ),
+      );
     }
   }
 
@@ -235,6 +280,44 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
 
               const SizedBox(height: 24.0),
+
+              _profileMenuTile(
+                icon: Icons.delete_forever_outlined,
+                title: 'Delete Account',
+                onTap: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (context) {
+                      return AlertDialog(
+                        title: const Text('Delete Account?'),
+                        content: const Text(
+                          'This will permanently delete your profile data. '
+                              'This action cannot be undone.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                            ),
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Delete'),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+
+                  if (confirmed == true && !_isDeletingAccount) {
+                    await _deleteAccount();
+                  }
+                },
+              ),
+
 
               // Logout button
               SizedBox(
