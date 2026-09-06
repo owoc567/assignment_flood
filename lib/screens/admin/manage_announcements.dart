@@ -71,8 +71,8 @@ class _ManageAnnouncementsPageState
       text: announcement?['title']?.toString() ?? '',
     );
 
-    final locationController = TextEditingController(
-      text: announcement?['location']?.toString() ?? '',
+    final areaController = TextEditingController(
+      text: announcement?['area']?.toString() ?? '',
     );
 
     final messageController = TextEditingController(
@@ -117,10 +117,9 @@ class _ManageAnnouncementsPageState
 
               final data = {
                 'title': titleController.text.trim(),
-                'location':
-                locationController.text.trim().isEmpty
+                'area': areaController.text.trim().isEmpty
                     ? null
-                    : locationController.text.trim(),
+                    : areaController.text.trim(),
                 'message': messageController.text.trim(),
                 'announcement_type': selectedType,
                 'is_active': isActive,
@@ -244,11 +243,11 @@ class _ManageAnnouncementsPageState
                         const SizedBox(height: 8),
 
                         TextFormField(
-                          controller: locationController,
+                          controller: areaController,
                           enabled: !isSaving,
                           maxLength: 100,
                           decoration: const InputDecoration(
-                            labelText: 'Location (optional)',
+                            labelText: 'Area (optional)',
                             hintText: 'Example: Setapak',
                             border: OutlineInputBorder(),
                             prefixIcon:
@@ -354,7 +353,7 @@ class _ManageAnnouncementsPageState
     );
 
     titleController.dispose();
-    locationController.dispose();
+    areaController.dispose();
     messageController.dispose();
 
     if (saved == true) {
@@ -542,8 +541,8 @@ class _ManageAnnouncementsPageState
               ),
             ),
 
-            if (announcement['location'] != null &&
-                announcement['location']
+            if (announcement['area'] != null &&
+                announcement['area']
                     .toString()
                     .trim()
                     .isNotEmpty) ...[
@@ -558,7 +557,7 @@ class _ManageAnnouncementsPageState
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      announcement['location'].toString(),
+                      announcement['area'].toString(),
                       style: const TextStyle(
                         color: Colors.grey,
                         fontSize: 12,
