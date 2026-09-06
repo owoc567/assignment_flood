@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'manage_announcements.dart';
+import 'manageUsers.dart';
+import 'manageReports.dart';
+import 'manageSos.dart';
+import 'manageCommunity.dart';
+import 'adminProfile.dart';
 
 
 class AdminPage extends StatefulWidget {
@@ -14,18 +19,92 @@ class _AdminPageState extends State<AdminPage> {
   final SupabaseClient _supabase = Supabase.instance.client;
 
   String _adminName = 'Administrator';
+  String? _adminProfileImageUrl;
+
   bool _isLoadingProfile = true;
+  bool _isLoadingDashboard = true;
+
+  int _totalUsers = 0;
+  int _totalReports = 0;
+  int _pendingReports = 0;
+  int _activeSos = 0;
+  int _communityPosts = 0;
+  int _activeAnnouncements = 0;
+
 
   @override
   void initState() {
     super.initState();
-    _loadAdminProfile();
+    _loadDashboard();
+  }
+
+  Future<void> _loadDashboard() async {
+    setState(() {
+      _isLoadingDashboard = true;
+    });
+
+    try {
+      await _loadAdminProfile();
+
+      final results = await Future.wait([
+        _supabase.from('profiles').select('id'),
+        _supabase.from('flood_reports').select('id, status'),
+        _supabase.from('sos_alerts').select('id, status'),
+        _supabase.from('community_posts').select('id'),
+        _supabase.from('announcements').select('id, is_active'),
+      ]);
+
+      final users = results[0] as List;
+      final reports = results[1] as List;
+      final sosAlerts = results[2] as List;
+      final communityPosts = results[3] as List;
+      final announcements = results[4] as List;
+
+      if (!mounted) return;
+
+      setState(() {
+        _totalUsers = users.length;
+        _totalReports = reports.length;
+
+        _pendingReports = reports.where((report) {
+          return report['status'] == 'pending';
+        }).length;
+
+        _activeSos = sosAlerts.where((alert) {
+          return alert['status'] == 'active';
+        }).length;
+
+        _communityPosts = communityPosts.length;
+
+        _activeAnnouncements = announcements.where((announcement) {
+          return announcement['is_active'] == true;
+        }).length;
+
+        _isLoadingDashboard = false;
+      });
+    } catch (error) {
+      debugPrint('Dashboard loading error: $error');
+
+      if (!mounted) return;
+
+      setState(() {
+        _isLoadingDashboard = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to load dashboard: $error'),
+        ),
+      );
+    }
   }
 
   Future<void> _loadAdminProfile() async {
     final user = _supabase.auth.currentUser;
 
     if (user == null) {
+      if (!mounted) return;
+
       setState(() {
         _isLoadingProfile = false;
       });
@@ -35,7 +114,9 @@ class _AdminPageState extends State<AdminPage> {
     try {
       final profile = await _supabase
           .from('profiles')
-          .select('full_name, role')
+          .select(
+        'full_name, role, profile_image_url',
+      )
           .eq('id', user.id)
           .maybeSingle();
 
@@ -43,11 +124,17 @@ class _AdminPageState extends State<AdminPage> {
 
       setState(() {
         _adminName =
-            profile?['full_name']?.toString() ?? 'Administrator';
+            profile?['full_name']?.toString() ??
+                'Administrator';
+
+        _adminProfileImageUrl =
+            profile?['profile_image_url']?.toString();
 
         _isLoadingProfile = false;
       });
-    } catch (_) {
+    } catch (error) {
+      debugPrint('Admin profile error: $error');
+
       if (!mounted) return;
 
       setState(() {
@@ -265,6 +352,20 @@ class _AdminPageState extends State<AdminPage> {
         ),
         actions: [
           IconButton(
+            tooltip: 'Admin Profile',
+            icon: const Icon(Icons.account_circle_outlined),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AdminProfilePage(),
+                ),
+              ).then((_) {
+                _loadDashboard();
+              });
+            },
+          ),
+          IconButton(
             tooltip: 'Sign Out',
             onPressed: _confirmSignOut,
             icon: const Icon(Icons.logout),
@@ -272,7 +373,7 @@ class _AdminPageState extends State<AdminPage> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _loadAdminProfile,
+        onRefresh: _loadDashboard,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -289,14 +390,21 @@ class _AdminPageState extends State<AdminPage> {
               ),
               child: Row(
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 28,
                     backgroundColor: Colors.white,
-                    child: Icon(
+                    backgroundImage: _adminProfileImageUrl != null &&
+                        _adminProfileImageUrl!.isNotEmpty
+                        ? NetworkImage(_adminProfileImageUrl!)
+                        : null,
+                    child: _adminProfileImageUrl == null ||
+                        _adminProfileImageUrl!.isEmpty
+                        ? const Icon(
                       Icons.admin_panel_settings,
                       size: 32,
                       color: Color(0xFF3730A3),
-                    ),
+                    )
+                        : null,
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -353,15 +461,44 @@ class _AdminPageState extends State<AdminPage> {
               children: [
                 _buildSummaryCard(
                   title: 'Pending reports',
-                  value: '—',
+                  value: _isLoadingDashboard
+                      ? '...'
+                      : _pendingReports.toString(),
                   icon: Icons.assignment_late_outlined,
                   color: Colors.orange,
                 ),
                 const SizedBox(width: 10),
                 _buildSummaryCard(
                   title: 'Active announcements',
-                  value: '—',
+                  value: _isLoadingDashboard
+                      ? '...'
+                      : _activeAnnouncements.toString(),
                   icon: Icons.campaign_outlined,
+                  color: Colors.red,
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 22),
+
+
+            Row(
+              children: [
+                _buildSummaryCard(
+                  title: 'Total users',
+                  value: _isLoadingDashboard
+                      ? '...'
+                      : _totalUsers.toString(),
+                  icon: Icons.people_outline,
+                  color: Colors.purple,
+                ),
+                const SizedBox(width: 10),
+                _buildSummaryCard(
+                  title: 'Active SOS',
+                  value: _isLoadingDashboard
+                      ? '...'
+                      : _activeSos.toString(),
+                  icon: Icons.sos,
                   color: Colors.red,
                 ),
               ],
@@ -379,27 +516,56 @@ class _AdminPageState extends State<AdminPage> {
 
             const SizedBox(height: 10),
 
+
+
             _buildAdminFunctionCard(
               title: 'Manage Flood Reports',
-              subtitle:
-              'Review reports and update their status',
-              icon: Icons.flood_outlined,
-              color: const Color(0xFF1976D2),
+              subtitle: 'Verify or reject reports submitted by users',
+              icon: Icons.fact_check_outlined,
+              color: const Color(0xFF159957),
               onTap: () {
-                _showComingSoon('Manage Flood Reports');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ManageReportsPage(),
+                  ),
+                ).then((_) {
+                  _loadDashboard();
+                });
               },
             ),
 
             _buildAdminFunctionCard(
-              title: 'Verify Community Reports',
-              subtitle:
-              'Verify or reject community flood reports',
-              icon: Icons.verified_outlined,
-              color: const Color(0xFF159957),
+              title: 'Manage Community Posts',
+              subtitle: 'Verify posts and remove spam content',
+              icon: Icons.forum_outlined,
+              color: const Color(0xFF1976D2),
               onTap: () {
-                _showComingSoon(
-                  'Verify Community Reports',
-                );
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ManageCommunityPage(),
+                  ),
+                ).then((_) {
+                  _loadDashboard();
+                });
+              },
+            ),
+
+            _buildAdminFunctionCard(
+              title: 'Manage SOS Records',
+              subtitle: 'View emergency requests and mark them as resolved',
+              icon: Icons.sos,
+              color: Colors.red,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ManageSosPage(),
+                  ),
+                ).then((_) {
+                  _loadDashboard();
+                });
               },
             ),
 
@@ -427,7 +593,14 @@ class _AdminPageState extends State<AdminPage> {
               icon: Icons.people_outline,
               color: const Color(0xFF7B2CBF),
               onTap: () {
-                _showComingSoon('Manage Users');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ManageUsersPage(),
+                  ),
+                ).then((_) {
+                  _loadDashboard();
+                });
               },
             ),
           ],

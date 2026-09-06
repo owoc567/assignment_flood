@@ -96,46 +96,46 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _deleteAccount() async {
+    if (_isDeletingAccount) return;
+
     setState(() {
       _isDeletingAccount = true;
     });
 
+    final supabase = Supabase.instance.client;
+
     try {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
+      await supabase.rpc('delete_my_account');
 
-      if (user == null) return;
-
-      // Delete the user's profile record
-      await supabase
-          .from('profiles')
-          .delete()
-          .eq('id', user.id);
-
-      // Sign out after deleting profile data
-      await supabase.auth.signOut();
+      // Clear the login session saved on the phone.
+      try {
+        await supabase.auth.signOut();
+      } catch (_) {
+        // The Authentication account has already been deleted.
+      }
 
       if (!mounted) return;
 
-      Navigator.pushAndRemoveUntil(
-        context,
+      Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
           builder: (context) => const SignIn(),
         ),
             (route) => false,
       );
-    } catch (e) {
+    } catch (error) {
       if (!mounted) return;
-
-      setState(() {
-        _isDeletingAccount = false;
-      });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Delete account failed: $e'),
+          content: Text('Failed to delete account: $error'),
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDeletingAccount = false;
+        });
+      }
     }
   }
 
@@ -287,16 +287,18 @@ class _ProfilePageState extends State<ProfilePage> {
                 onTap: () async {
                   final confirmed = await showDialog<bool>(
                     context: context,
-                    builder: (context) {
+                    builder: (dialogContext) {
                       return AlertDialog(
                         title: const Text('Delete Account?'),
                         content: const Text(
-                          'This will permanently delete your profile data. '
+                          'This will permanently delete your account and all related data. '
                               'This action cannot be undone.',
                         ),
                         actions: [
                           TextButton(
-                            onPressed: () => Navigator.pop(context, false),
+                            onPressed: () {
+                              Navigator.pop(dialogContext, false);
+                            },
                             child: const Text('Cancel'),
                           ),
                           ElevatedButton(
@@ -304,8 +306,10 @@ class _ProfilePageState extends State<ProfilePage> {
                               backgroundColor: Colors.red,
                               foregroundColor: Colors.white,
                             ),
-                            onPressed: () => Navigator.pop(context, true),
-                            child: const Text('Delete'),
+                            onPressed: () {
+                              Navigator.pop(dialogContext, true);
+                            },
+                            child: const Text('Delete Account'),
                           ),
                         ],
                       );
