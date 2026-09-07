@@ -163,14 +163,6 @@ class _SignUpState extends State<SignUp> {
         }
       }
 
-      await supabase.from('profiles').insert({
-        'id': user.id,
-        'full_name': _usernameController.text.trim(),
-        'phone_number': null,
-        'profile_image_url': profileImageUrl,
-        'role': 'user',
-      });
-
       // Return to the Sign In page after registration.
       await supabase.auth.signOut();
 

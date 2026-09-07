@@ -506,6 +506,31 @@ class _AdminPageState extends State<AdminPage> {
 
             const SizedBox(height: 22),
 
+            Row(
+              children: [
+                _buildSummaryCard(
+                  title: 'Total reports',
+                  value: _isLoadingDashboard
+                      ? '...'
+                      : _totalReports.toString(),
+                  icon: Icons.description_outlined,
+                  color: Colors.blue,
+                ),
+                const SizedBox(width: 10),
+                _buildSummaryCard(
+                  title: 'Community posts',
+                  value: _isLoadingDashboard
+                      ? '...'
+                      : _communityPosts.toString(),
+                  icon: Icons.forum_outlined,
+                  color: Colors.teal,
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 22),
+
+
             const Text(
               'Administration',
               style: TextStyle(

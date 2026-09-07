@@ -71,7 +71,6 @@ flutter:
     - assets/images/Mobile Wallpaper.png
     - assets/images/signIn.png
     - assets/images/profileImageDefault.jpg
-    - assets/translations/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
