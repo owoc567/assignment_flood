@@ -143,16 +143,6 @@ class _AdminPageState extends State<AdminPage> {
     }
   }
 
-  void _showComingSoon(String functionName) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '$functionName page will be connected next',
-        ),
-      ),
-    );
-  }
-
   Future<void> _confirmSignOut() async {
     final shouldSignOut = await showDialog<bool>(
       context: context,

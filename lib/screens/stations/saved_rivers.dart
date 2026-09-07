@@ -267,7 +267,7 @@ class _SavedRiversPageState extends State<SavedRiversPage> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(vertical: 8),
         itemCount: _stations.length,
-        separatorBuilder: (_, __) => const Divider(height: 1),
+        separatorBuilder: (_, _) =>const Divider(height: 1),
         itemBuilder: (context, index) {
           return _savedStationTile(_stations[index]);
         },
@@ -288,7 +288,12 @@ class _SavedRiversPageState extends State<SavedRiversPage> {
       ),
       title: Text(
         station.name,
-        style: const TextStyle(fontWeight: FontWeight.w600),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+        ),
       ),
       subtitle: Text(
         '${station.river}\n${station.waterLevel.toStringAsFixed(2)} m · '
@@ -302,19 +307,32 @@ class _SavedRiversPageState extends State<SavedRiversPage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            Text(
-              station.status,
-              style: TextStyle(
-                color: color,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
+            Flexible(
+              child: Text(
+                station.status,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
+
             IconButton(
               tooltip: notificationsEnabled
                   ? 'Disable notifications'
                   : 'Enable notifications',
-              onPressed: () => _toggleNotifications(station),
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints(
+                minWidth: 32,
+                minHeight: 32,
+              ),
+              onPressed: () {
+                _toggleNotifications(station);
+              },
               icon: Icon(
                 notificationsEnabled
                     ? Icons.notifications
@@ -322,16 +340,25 @@ class _SavedRiversPageState extends State<SavedRiversPage> {
                 color: notificationsEnabled
                     ? const Color(0xFF514BD6)
                     : Colors.grey,
-                size: 20,
+                size: 19,
               ),
             ),
+
             IconButton(
               tooltip: 'Remove saved station',
-              onPressed: () => _removeStation(station),
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints(
+                minWidth: 32,
+                minHeight: 32,
+              ),
+              onPressed: () {
+                _removeStation(station);
+              },
               icon: const Icon(
                 Icons.bookmark,
                 color: Colors.amber,
-                size: 20,
+                size: 19,
               ),
             ),
           ],

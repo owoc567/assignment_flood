@@ -18,6 +18,10 @@ import '../users/community.dart';
 import '../../services/rainfall_service.dart';
 import '../../models/rainfall_station.dart';
 import '../stations/heavy_rain_stations.dart';
+import '../users/announcement_carousel.dart';
+import '../users/announcements.dart';
+import '../users/mySubmissions.dart';
+import '../emergency/flood_guidelines.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -227,17 +231,33 @@ class _DashboardState extends State<Dashboard> {
         return;
       }
 
-      throw Exception('No government forecast matches your current area.');
-    } catch (error) {
+        // No matching forecast location was found.
+        // Use Kuala Lumpur as the default forecast.
+      final fallbackForecasts = await _fetchForecastData('St009');
+
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Using Kuala Lumpur weather. ${error.toString()}',
-          ),
-        ),
-      );
+      setState(() {
+        _weatherLocationName = 'Kuala Lumpur';
+        forecastData = Future.value(fallbackForecasts);
+      });
+
+      return;
+    } catch (error) {
+      debugPrint('Location weather error: $error');
+
+      try {
+        final fallbackForecasts = await _fetchForecastData('St009');
+
+        if (!mounted) return;
+
+        setState(() {
+          _weatherLocationName = 'Kuala Lumpur';
+          forecastData = Future.value(fallbackForecasts);
+        });
+      }catch (fallbackError){
+        debugPrint('Kuala Lumpur weather error: $fallbackError');
+      }
     } finally {
       _isGettingLocation = false;
     }
@@ -419,17 +439,62 @@ class _DashboardState extends State<Dashboard> {
             ),
 
             Expanded(
-              child: ListView(
+              child:
+              ListView(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 children: [
                   ListTile(
-                    leading: const Icon(
-                      Icons.home_outlined,
-                      color: Color(0xFF4A45D6),
-                    ),
-                    title: const Text('Home'),
+                    leading: const Icon(Icons.campaign_outlined),
+                    title: const Text('Announcements'),
                     onTap: () {
                       Navigator.pop(context);
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AnnouncementsPage(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  ListTile(
+                    leading: const Icon(
+                      Icons.assignment_turned_in_outlined,
+                      color: Color(0xFF4A45D6),
+                    ),
+                    title: const Text('My Submissions'),
+                    subtitle: const Text('Track SOS and flood reports'),
+                    onTap: () {
+                      Navigator.pop(context);
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                          const MySubmissionsPage(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  ListTile(
+                    leading: const Icon(
+                      Icons.health_and_safety_outlined,
+                      color: Color(0xFF4A45D6),
+                    ),
+                    title: const Text('Flood Safety Guide'),
+                    subtitle: const Text('Available offline'),
+                    onTap: () {
+                      Navigator.pop(context);
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                          const FloodGuidelinesPage(),
+                        ),
+                      );
                     },
                   ),
 
@@ -503,18 +568,6 @@ class _DashboardState extends State<Dashboard> {
 
                   ListTile(
                     leading: const Icon(
-                      Icons.warning_amber_rounded,
-                      color: Colors.orange,
-                    ),
-                    title: const Text('Active Alerts'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _openAlertsPage();
-                    },
-                  ),
-
-                  ListTile(
-                    leading: const Icon(
                       Icons.notifications_outlined,
                       color: Color(0xFF4A45D6),
                     ),
@@ -527,21 +580,6 @@ class _DashboardState extends State<Dashboard> {
 
                   const Divider(),
 
-                  ListTile(
-                    leading: const Icon(Icons.person_outline),
-                    title: const Text('My Profile'),
-                    onTap: () {
-                      Navigator.pop(context);
-
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                          const ProfilePage(),
-                        ),
-                      );
-                    },
-                  ),
                 ],
               ),
             ),
@@ -648,6 +686,7 @@ class _DashboardState extends State<Dashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const AnnouncementCarousel(),
                 FutureBuilder<FloodStationSummary>(
                   future: floodData,
                   builder: (context, snapshot) {
@@ -766,7 +805,7 @@ class _DashboardState extends State<Dashboard> {
                   children: [
                     Expanded(
                       child: _actionCard(
-                        icon: Icons.forum_outlined,
+                        icon: Icons.groups_outlined,
                         iconColor: const Color(0xFF4A45D6),
                         title: 'Community',
                         subtitle: 'Share flood updates',
@@ -844,7 +883,7 @@ class _DashboardState extends State<Dashboard> {
                   children: [
                     IconButton(
                       icon: const Icon(
-                        Icons.notifications_none,
+                        Icons.crisis_alert_rounded,
                         color: Colors.grey,
                       ),
                       onPressed: _openAlertsPage,
@@ -1636,76 +1675,6 @@ class _DashboardState extends State<Dashboard> {
           ),
         );
       },
-    );
-  }
-
-  Widget _reportFloodCard() {
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const ReportFloodPage(),
-          ),
-        );
-      },
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(14),
-
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x10000000),
-              blurRadius: 8,
-              offset: Offset(0, 3),
-            ),
-          ],
-        ),
-
-        child: const Row(
-          children: [
-            Icon(
-              Icons.outlined_flag,
-              color: Color(0xFFFF174F),
-              size: 28,
-            ),
-
-            SizedBox(width: 12),
-
-            Expanded(
-              child: Column(
-                crossAxisAlignment:
-                CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Report Flood',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    'Notify authorities',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            CircleAvatar(
-              radius: 4,
-              backgroundColor: Color(0xFFFF174F),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

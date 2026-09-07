@@ -132,61 +132,6 @@ class _HeavyRainStationsPageState
     }
   }
 
-  Color _amountColor(double amount) {
-    if (amount > 60) return const Color(0xFFE53935);
-    if (amount >= 31) return const Color(0xFFF28C28);
-    if (amount >= 11) return const Color(0xFFE0C000);
-    if (amount >= 1) return const Color(0xFF159957);
-    return Colors.grey;
-  }
-
-  Widget _buildDailyHistory(RainfallStation station) {
-    if (station.dailyRainfall.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 10),
-        const Text(
-          'Previous 6 days',
-          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 6),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: station.dailyRainfall.entries.map((entry) {
-              final color = _amountColor(entry.value);
-              final shortDate = entry.key.length >= 5
-                  ? entry.key.substring(0, 5)
-                  : entry.key;
-              return Container(
-                width: 55,
-                margin: const EdgeInsets.only(right: 6),
-                padding: const EdgeInsets.symmetric(vertical: 7),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                child: Column(
-                  children: [
-                    Text(shortDate,
-                        style: const TextStyle(fontSize: 9, color: Colors.grey)),
-                    const SizedBox(height: 3),
-                    Text('${entry.value.toStringAsFixed(1)} mm',
-                        style: TextStyle(
-                            fontSize: 9,
-                            color: color,
-                            fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildStationCard(RainfallStation station) {
     final intensityColor =

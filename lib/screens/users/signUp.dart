@@ -163,6 +163,25 @@ class _SignUpState extends State<SignUp> {
         }
       }
 
+      final profileData = <String, dynamic>{
+        'full_name': _usernameController.text.trim(),
+        'email': _emailController.text.trim().toLowerCase(),
+        'phone_number': _phoneNumberController.text.trim(),
+      };
+
+    // Only update the image URL when an image was uploaded.
+      if (profileImageUrl != null) {
+        profileData['profile_image_url'] =
+            profileImageUrl;
+      }
+
+    // The database trigger already created the profile.
+    // Therefore, update it instead of inserting another row.
+      await supabase
+          .from('profiles')
+          .update(profileData)
+          .eq('id', user.id);
+
       // Return to the Sign In page after registration.
       await supabase.auth.signOut();
 

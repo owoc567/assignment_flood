@@ -3,6 +3,8 @@ import 'package:location/location.dart';
 import 'package:permission_handler/permission_handler.dart' as handler;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:developer';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:assignment_flood/services/offline_sos_database.dart';
 
 class SosPage extends StatefulWidget {
   const SosPage({super.key});
@@ -14,6 +16,8 @@ class SosPage extends StatefulWidget {
 class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
   final _messageController = TextEditingController();
   final Location _location = Location();
+  // Replace this with the actual admin/emergency phone number.
+  static const String _adminPhoneNumber = '+601110882926';
 
   bool _permissionGranted = false;
   bool _gpsEnabled = false;
@@ -174,60 +178,203 @@ class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
     await _sendSos();
   }
 
+  Future<bool> _openSmsFallback({
+    required String fullName,
+    required String phoneNumber,
+    required double latitude,
+    required double longitude,
+    required String message,
+  }) async {
+    final sosMessage = '''
+    EMERGENCY FLOOD SOS
+    
+    Name: $fullName
+    Phone: ${phoneNumber.isEmpty ? 'Not provided' : phoneNumber}
+    Situation: ${message.isEmpty ? 'Emergency assistance required' : message}
+    Latitude: $latitude
+    Longitude: $longitude
+    Map: https://maps.google.com/?q=$latitude,$longitude
+    Time: ${DateTime.now().toLocal()}
+
+    Please provide emergency assistance.
+    ''';
+
+    final encodedMessage =
+    Uri.encodeComponent(sosMessage);
+
+    final smsUri = Uri.parse(
+      'sms:$_adminPhoneNumber?body=$encodedMessage',
+    );
+
+      try {
+        return await launchUrl(
+          smsUri,
+          mode: LaunchMode.externalApplication,
+        );
+      } catch (error) {
+        debugPrint('Unable to open SMS: $error');
+        return false;
+      }
+    }
+
   Future<void> _sendSos() async {
+    if (_isSending) return;
+
     setState(() {
       _isSending = true;
     });
 
-    try {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
 
+    try {
       if (user == null) {
-        throw Exception('You must be signed in to send an SOS.');
+        throw Exception(
+          'You must be signed in to send an SOS.',
+        );
       }
 
-      // Get a single current location reading.
-      final LocationData locationData = await _location.getLocation();
+      // Get the current GPS location.
+      final LocationData locationData =
+      await _location.getLocation();
 
       final latitude = locationData.latitude;
       final longitude = locationData.longitude;
 
       if (latitude == null || longitude == null) {
-        throw Exception('Unable to get your current location.');
+        throw Exception(
+          'Unable to get your current location.',
+        );
       }
 
-      // Fetch the user's name to attach to the alert for authorities.
-      String? fullName;
+      String fullName = 'Unknown user';
+      String phoneNumber = '';
+
+      // Try to obtain profile information.
       try {
         final profile = await supabase
             .from('profiles')
-            .select('full_name')
+            .select('full_name, phone_number')
             .eq('id', user.id)
             .single();
-        fullName = profile['full_name'] as String?;
-      } catch (_) {
-        // Non-critical, proceed without name if lookup fails.
+
+        fullName =
+            profile['full_name']?.toString() ??
+                'Unknown user';
+
+        phoneNumber =
+            profile['phone_number']?.toString() ?? '';
+      } catch (error) {
+        debugPrint(
+          'Could not load profile for SOS: $error',
+        );
+
+        // Use authentication information as fallback.
+        fullName =
+            user.userMetadata?['full_name']?.toString() ??
+                user.email ??
+                'Unknown user';
+
+        phoneNumber =
+            user.userMetadata?['phone_number']
+                ?.toString() ??
+                '';
       }
 
-      await supabase.from('sos_alerts').insert({
-        'user_id': user.id,
-        'full_name': fullName,
-        'latitude': latitude,
-        'longitude': longitude,
-        'message': _messageController.text.trim().isEmpty
-            ? null
-            : _messageController.text.trim(),
-        'status': 'pending',
-      });
+      final situation = _messageController.text.trim();
 
-      if (!mounted) return;
+      try {
+        // First attempt: send to Supabase.
+        await supabase.from('sos_alerts').insert({
+          'user_id': user.id,
+          'full_name': fullName,
+          'latitude': latitude,
+          'longitude': longitude,
+          'message':
+          situation.isEmpty ? null : situation,
+          'status': 'active',
+        });
 
-      setState(() {
-        _sent = true;
-      });
-    } catch (e) {
-      _showError('Failed to send SOS: $e');
+        if (!mounted) return;
+
+        setState(() {
+          _sent = true;
+        });
+      } catch (supabaseError) {
+        debugPrint(
+          'Online SOS failed: $supabaseError',
+        );
+
+        // Second attempt: save the SOS in SQLite.
+        await OfflineSosDatabase.instance.saveOfflineSos(
+          userId: user.id,
+          fullName: fullName,
+          phoneNumber: phoneNumber,
+          latitude: latitude,
+          longitude: longitude,
+          message:
+          situation.isEmpty ? null : situation,
+        );
+
+        if (!mounted) return;
+
+        final openSms = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) {
+            return AlertDialog(
+              icon: const Icon(
+                Icons.signal_wifi_off,
+                color: Colors.orange,
+                size: 45,
+              ),
+              title: const Text('No Internet Connection'),
+              content: const Text(
+                'Your SOS could not be sent to the admin '
+                    'dashboard. It has been saved on this device.\n\n'
+                    'Open SMS now to send your location directly '
+                    'to the emergency contact?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context, false);
+                  },
+                  child: const Text('Not Now'),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context, true);
+                  },
+                  icon: const Icon(Icons.sms_outlined),
+                  label: const Text('Open SMS'),
+                ),
+              ],
+            );
+          },
+        );
+
+        if (openSms == true) {
+          final smsOpened = await _openSmsFallback(
+            fullName: fullName,
+            phoneNumber: phoneNumber,
+            latitude: latitude,
+            longitude: longitude,
+            message: situation,
+          );
+
+          if (!mounted) return;
+
+          if (!smsOpened) {
+            _showError(
+              'Unable to open the SMS application. '
+                  'Please call the emergency contact directly.',
+            );
+          }
+        }
+      }
+    } catch (error) {
+      _showError('Unable to prepare SOS: $error');
     } finally {
       if (mounted) {
         setState(() {

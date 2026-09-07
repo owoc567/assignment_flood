@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:assignment_flood/screens/users/signIn.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:easy_localization/easy_localization.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
