@@ -77,14 +77,15 @@ class FloodService {
   Future<List<FloodStation>> fetchStationsForState(String stateCode) async {
     final stateName = stateCodes[stateCode] ?? stateCode;
 
-    final url = Uri.parse(
-      '$_baseUrl/aras-air/data-paras-air/aras-air-data/',
-    ).replace(queryParameters: {
-      'state': stateCode,
-      'district': 'ALL',
-      'station': 'ALL',
-      'lang': 'en',
-    });
+    final url = Uri.parse('$_baseUrl/aras-air/data-paras-air/aras-air-data/')
+        .replace(
+          queryParameters: {
+            'state': stateCode,
+            'district': 'ALL',
+            'station': 'ALL',
+            'lang': 'en',
+          },
+        );
 
     final response = await http.get(
       url,
@@ -92,7 +93,7 @@ class FloodService {
         'Accept': 'text/html',
         // Some gov sites reject requests with no/blank User-Agent.
         'User-Agent':
-        'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Mobile Safari/537.36',
+            'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Mobile Safari/537.36',
       },
     );
 
@@ -173,20 +174,22 @@ class FloodService {
         danger: dangerLevel,
       );
 
-      stations.add(FloodStation(
-        id: id,
-        name: name,
-        river: subBasin.isNotEmpty ? subBasin : mainBasin,
-        district: district,
-        state: stateName,
-        status: status,
-        waterLevel: waterLevel,
-        lastUpdated: lastUpdated,
-        normalLevel: normalLevel,
-        alertLevel: alertLevel,
-        warningLevel: warningLevel,
-        dangerLevel: dangerLevel,
-      ));
+      stations.add(
+        FloodStation(
+          id: id,
+          name: name,
+          river: subBasin.isNotEmpty ? subBasin : mainBasin,
+          district: district,
+          state: stateName,
+          status: status,
+          waterLevel: waterLevel,
+          lastUpdated: lastUpdated,
+          normalLevel: normalLevel,
+          alertLevel: alertLevel,
+          warningLevel: warningLevel,
+          dangerLevel: dangerLevel,
+        ),
+      );
     }
 
     print('$stateName: parsed ${stations.length} stations');
@@ -197,12 +200,12 @@ class FloodService {
   /// levels, highest severity first, so status is always derived fresh
   /// rather than trusted from a static field.
   String _computeStatus(
-      double waterLevel, {
-        double? normal,
-        double? alert,
-        double? warning,
-        double? danger,
-      }) {
+    double waterLevel, {
+    double? normal,
+    double? alert,
+    double? warning,
+    double? danger,
+  }) {
     if (danger != null && waterLevel >= danger) return 'Danger';
     if (warning != null && waterLevel >= warning) return 'Warning';
     if (alert != null && waterLevel >= alert) return 'Alert';

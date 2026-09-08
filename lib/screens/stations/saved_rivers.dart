@@ -59,7 +59,7 @@ class _SavedRiversPageState extends State<SavedRiversPage> {
           .toList();
 
       savedStations.sort(
-            (a, b) => _severity(b.status).compareTo(_severity(a.status)),
+        (a, b) => _severity(b.status).compareTo(_severity(a.status)),
       );
 
       if (!mounted) return;
@@ -69,10 +69,8 @@ class _SavedRiversPageState extends State<SavedRiversPage> {
           ..clear()
           ..addEntries(
             savedRecords.map(
-                  (record) => MapEntry(
-                record.stationId,
-                record.notificationsEnabled,
-              ),
+              (record) =>
+                  MapEntry(record.stationId, record.notificationsEnabled),
             ),
           );
         _isLoading = false;
@@ -142,9 +140,7 @@ class _SavedRiversPageState extends State<SavedRiversPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Remove saved station?'),
-        content: Text(
-          'Remove ${station.name} from your saved rivers?',
-        ),
+        content: Text('Remove ${station.name} from your saved rivers?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -190,10 +186,7 @@ class _SavedRiversPageState extends State<SavedRiversPage> {
               padding: const EdgeInsets.only(right: 16),
               child: Text(
                 '${_stations.length} saved',
-                style: const TextStyle(
-                  color: Colors.grey,
-                  fontSize: 13,
-                ),
+                style: const TextStyle(color: Colors.grey, fontSize: 13),
               ),
             ),
           ),
@@ -244,10 +237,7 @@ class _SavedRiversPageState extends State<SavedRiversPage> {
               const SizedBox(height: 14),
               const Text(
                 'No saved rivers yet',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 7),
               const Text(
@@ -267,7 +257,7 @@ class _SavedRiversPageState extends State<SavedRiversPage> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(vertical: 8),
         itemCount: _stations.length,
-        separatorBuilder: (_, _) =>const Divider(height: 1),
+        separatorBuilder: (_, _) => const Divider(height: 1),
         itemBuilder: (context, index) {
           return _savedStationTile(_stations[index]);
         },
@@ -290,14 +280,11 @@ class _SavedRiversPageState extends State<SavedRiversPage> {
         station.name,
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          fontWeight: FontWeight.w600,
-          fontSize: 14,
-        ),
+        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
       ),
       subtitle: Text(
         '${station.river}\n${station.waterLevel.toStringAsFixed(2)} m · '
-            'Updated ${station.lastUpdated}',
+        'Updated ${station.lastUpdated}',
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
       ),
@@ -326,10 +313,7 @@ class _SavedRiversPageState extends State<SavedRiversPage> {
                   : 'Enable notifications',
               padding: EdgeInsets.zero,
               visualDensity: VisualDensity.compact,
-              constraints: const BoxConstraints(
-                minWidth: 32,
-                minHeight: 32,
-              ),
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
               onPressed: () {
                 _toggleNotifications(station);
               },
@@ -348,18 +332,11 @@ class _SavedRiversPageState extends State<SavedRiversPage> {
               tooltip: 'Remove saved station',
               padding: EdgeInsets.zero,
               visualDensity: VisualDensity.compact,
-              constraints: const BoxConstraints(
-                minWidth: 32,
-                minHeight: 32,
-              ),
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
               onPressed: () {
                 _removeStation(station);
               },
-              icon: const Icon(
-                Icons.bookmark,
-                color: Colors.amber,
-                size: 19,
-              ),
+              icon: const Icon(Icons.bookmark, color: Colors.amber, size: 19),
             ),
           ],
         ),

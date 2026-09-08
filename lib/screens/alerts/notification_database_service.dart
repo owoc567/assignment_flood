@@ -7,7 +7,7 @@ import 'notification_model.dart';
 
 class NotificationDatabaseService {
   static final NotificationDatabaseService _databaseService =
-  NotificationDatabaseService._internal();
+      NotificationDatabaseService._internal();
 
   factory NotificationDatabaseService() => _databaseService;
 
@@ -32,24 +32,20 @@ class NotificationDatabaseService {
 
     log('SQLite database location: $path');
 
-    return openDatabase(
-      path,
-      version: 1,
-      onCreate: _createDatabase,
-    );
+    return openDatabase(path, version: 1, onCreate: _createDatabase);
   }
 
   // Create the Notifications table
   Future<void> _createDatabase(Database db, int version) async {
     await db.execute(
       'CREATE TABLE Notifications('
-          'id INTEGER PRIMARY KEY AUTOINCREMENT, '
-          'title TEXT NOT NULL, '
-          'message TEXT NOT NULL, '
-          'time TEXT NOT NULL, '
-          'level TEXT NOT NULL, '
-          'is_read INTEGER NOT NULL'
-          ')',
+      'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+      'title TEXT NOT NULL, '
+      'message TEXT NOT NULL, '
+      'time TEXT NOT NULL, '
+      'level TEXT NOT NULL, '
+      'is_read INTEGER NOT NULL'
+      ')',
     );
   }
 
@@ -57,27 +53,19 @@ class NotificationDatabaseService {
   Future<List<NotificationModel>> getNotifications() async {
     final db = await database;
 
-    final data = await db.query(
-      'Notifications',
-      orderBy: 'id DESC',
-    );
+    final data = await db.query('Notifications', orderBy: 'id DESC');
 
     return List.generate(
       data.length,
-          (index) => NotificationModel.fromJson(data[index]),
+      (index) => NotificationModel.fromJson(data[index]),
     );
   }
 
   // Insert a notification
-  Future<void> insertNotification(
-      NotificationModel notification,
-      ) async {
+  Future<void> insertNotification(NotificationModel notification) async {
     final db = await database;
 
-    final result = await db.insert(
-      'Notifications',
-      notification.toMap(),
-    );
+    final result = await db.insert('Notifications', notification.toMap());
 
     log('Inserted notification: $result');
   }
@@ -100,10 +88,7 @@ class NotificationDatabaseService {
   Future<void> markAllAsRead() async {
     final db = await database;
 
-    final result = await db.update(
-      'Notifications',
-      {'is_read': 1},
-    );
+    final result = await db.update('Notifications', {'is_read': 1});
 
     log('Updated notifications: $result');
   }

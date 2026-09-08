@@ -49,9 +49,7 @@ class HomePage extends StatelessWidget {
                   onPressed: () {
                     Navigator.push(
                       context, // now this context IS below MaterialApp
-                      MaterialPageRoute(
-                        builder: (context) => const SignIn(),
-                      ),
+                      MaterialPageRoute(builder: (context) => const SignIn()),
                     );
                   },
                   child: const Text('Get Started'),

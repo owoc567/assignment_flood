@@ -22,6 +22,8 @@ import '../users/announcement_carousel.dart';
 import '../users/announcements.dart';
 import '../users/mySubmissions.dart';
 import '../emergency/flood_guidelines.dart';
+import 'package:assignment_flood/services/offline_sos_sync_service.dart';
+import '../emergency/emergency_contacts.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -42,27 +44,26 @@ class _DashboardState extends State<Dashboard> {
   @override
   void initState() {
     super.initState();
+    OfflineSosSyncService.instance.start();
 
     // Show Kuala Lumpur first while the phone location is being obtained.
     forecastData = _fetchForecastData('St009');
     floodData = _floodService.fetchStationSummary();
-    heavyRainData =_rainfallService.fetchRainfallStations();
+    heavyRainData = _rainfallService.fetchRainfallStations();
 
     // Replace Kuala Lumpur with the user's detected area when available.
     _loadWeatherUsingCurrentLocation();
   }
 
-  Future<List<Forecast>> _fetchForecastData(
-      String locationId,
-      ) async {
+  Future<List<Forecast>> _fetchForecastData(String locationId) async {
     if (locationId.isEmpty) {
       return Future.value([]);
     }
 
     final url = Uri.parse(
       'https://api.data.gov.my/weather/forecast'
-          '?contains=$locationId@location__location_id'
-          '&sort=date',
+      '?contains=$locationId@location__location_id'
+      '&sort=date',
     );
 
     try {
@@ -75,28 +76,20 @@ class _DashboardState extends State<Dashboard> {
           return Forecast.fromJson(json);
         }).toList();
       } else {
-        throw Exception(
-          'Failed to load forecast: ${response.statusCode}',
-        );
+        throw Exception('Failed to load forecast: ${response.statusCode}');
       }
     } catch (e) {
-      throw Exception(
-        'Error fetching forecast data: $e',
-      );
+      throw Exception('Error fetching forecast data: $e');
     }
   }
 
   Future<List<Forecast>> _fetchForecastByLocationName(
-      String locationName,
-      ) async {
-    final url = Uri.https(
-      'api.data.gov.my',
-      '/weather/forecast',
-      {
-        'contains': '$locationName@location__location_name',
-        'sort': 'date',
-      },
-    );
+    String locationName,
+  ) async {
+    final url = Uri.https('api.data.gov.my', '/weather/forecast', {
+      'contains': '$locationName@location__location_name',
+      'sort': 'date',
+    });
 
     try {
       final response = await http.get(url);
@@ -165,27 +158,25 @@ class _DashboardState extends State<Dashboard> {
       );
 
       final geocoding = Geocoding();
-      final List<Placemark> placemarks =
-      await geocoding.placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
-      );
+      final List<Placemark> placemarks = await geocoding
+          .placemarkFromCoordinates(position.latitude, position.longitude);
 
       if (placemarks.isEmpty) {
         throw Exception('Unable to identify your current area.');
       }
 
       final place = placemarks.first;
-      final detectedNames = <String>[
-        place.subLocality ?? '',
-        place.locality ?? '',
-        place.subAdministrativeArea ?? '',
-        place.administrativeArea ?? '',
-      ]
-          .map((name) => name.trim())
-          .where((name) => name.isNotEmpty)
-          .toSet()
-          .toList();
+      final detectedNames =
+          <String>[
+                place.subLocality ?? '',
+                place.locality ?? '',
+                place.subAdministrativeArea ?? '',
+                place.administrativeArea ?? '',
+              ]
+              .map((name) => name.trim())
+              .where((name) => name.isNotEmpty)
+              .toSet()
+              .toList();
 
       if (detectedNames.isEmpty) {
         throw Exception('Unable to identify your current area.');
@@ -231,8 +222,8 @@ class _DashboardState extends State<Dashboard> {
         return;
       }
 
-        // No matching forecast location was found.
-        // Use Kuala Lumpur as the default forecast.
+      // No matching forecast location was found.
+      // Use Kuala Lumpur as the default forecast.
       final fallbackForecasts = await _fetchForecastData('St009');
 
       if (!mounted) return;
@@ -255,7 +246,7 @@ class _DashboardState extends State<Dashboard> {
           _weatherLocationName = 'Kuala Lumpur';
           forecastData = Future.value(fallbackForecasts);
         });
-      }catch (fallbackError){
+      } catch (fallbackError) {
         debugPrint('Kuala Lumpur weather error: $fallbackError');
       }
     } finally {
@@ -277,18 +268,18 @@ class _DashboardState extends State<Dashboard> {
       'hujan di beberapa tempat': 'Scattered rain',
       'hujan di satu dua tempat': 'Isolated rain',
       'hujan di satu dua tempat di kawasan pantai':
-      'Isolated rain over coastal areas',
+          'Isolated rain over coastal areas',
       'hujan di satu dua tempat di kawasan pedalaman':
-      'Isolated rain over inland areas',
+          'Isolated rain over inland areas',
       'ribut petir': 'Thunderstorms',
       'ribut petir di beberapa tempat': 'Scattered thunderstorms',
       'ribut petir di beberapa tempat di kawasan pedalaman':
-      'Scattered thunderstorms over inland areas',
+          'Scattered thunderstorms over inland areas',
       'ribut petir di satu dua tempat': 'Isolated thunderstorms',
       'ribut petir di satu dua tempat di kawasan pantai':
-      'Isolated thunderstorms over coastal areas',
+          'Isolated thunderstorms over coastal areas',
       'ribut petir di satu dua tempat di kawasan pedalaman':
-      'Isolated thunderstorms over inland areas',
+          'Isolated thunderstorms over inland areas',
     };
 
     return translations[weather] ?? malayWeather;
@@ -299,36 +290,27 @@ class _DashboardState extends State<Dashboard> {
       floodData = _floodService.fetchStationSummary();
     });
 
-    await Future.wait([
-      _loadWeatherUsingCurrentLocation(),
-      floodData!,
-    ]);
+    await Future.wait([_loadWeatherUsingCurrentLocation(), floodData!]);
   }
 
   void _openSearchPage() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const SearchPage(),
-      ),
+      MaterialPageRoute(builder: (context) => const SearchPage()),
     );
   }
 
   void _openAlertsPage() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const AlertsPage(),
-      ),
+      MaterialPageRoute(builder: (context) => const AlertsPage()),
     ).then((_) => _refreshDashboard());
   }
 
   void _openNotificationsPage() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const NotificationsPage(),
-      ),
+      MaterialPageRoute(builder: (context) => const NotificationsPage()),
     );
   }
 
@@ -339,7 +321,8 @@ class _DashboardState extends State<Dashboard> {
         if (!snapshot.hasData) return const SizedBox.shrink();
 
         final summary = snapshot.data!;
-        final count = summary.alertStations +
+        final count =
+            summary.alertStations +
             summary.warningStations +
             summary.dangerStations;
         if (count == 0) return const SizedBox.shrink();
@@ -386,9 +369,7 @@ class _DashboardState extends State<Dashboard> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => SearchPage(
-          initialFilter: filter,
-        ),
+        builder: (context) => SearchPage(initialFilter: filter),
       ),
     );
   }
@@ -402,9 +383,7 @@ class _DashboardState extends State<Dashboard> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(
-                color: Color(0xFF4A45D6),
-              ),
+              decoration: const BoxDecoration(color: Color(0xFF4A45D6)),
               child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -429,18 +408,14 @@ class _DashboardState extends State<Dashboard> {
                   SizedBox(height: 4),
                   Text(
                     'Flood Monitoring System',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 13,
-                    ),
+                    style: TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                 ],
               ),
             ),
 
             Expanded(
-              child:
-              ListView(
+              child: ListView(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 children: [
                   ListTile(
@@ -471,8 +446,7 @@ class _DashboardState extends State<Dashboard> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) =>
-                          const MySubmissionsPage(),
+                          builder: (context) => const MySubmissionsPage(),
                         ),
                       );
                     },
@@ -491,8 +465,27 @@ class _DashboardState extends State<Dashboard> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
+                          builder: (context) => const FloodGuidelinesPage(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  ListTile(
+                    leading: const Icon(
+                      Icons.contact_phone_outlined,
+                      color: Colors.red,
+                    ),
+                    title: const Text('Emergency Contacts'),
+                    subtitle: const Text('Call emergency services or a trusted contact'),
+                    onTap: () {
+                      Navigator.pop(context);
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
                           builder: (context) =>
-                          const FloodGuidelinesPage(),
+                          const EmergencyContactsPage(),
                         ),
                       );
                     },
@@ -522,8 +515,7 @@ class _DashboardState extends State<Dashboard> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) =>
-                          const SavedRiversPage(),
+                          builder: (context) => const SavedRiversPage(),
                         ),
                       );
                     },
@@ -538,8 +530,7 @@ class _DashboardState extends State<Dashboard> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) =>
-                          const ReportFloodPage(),
+                          builder: (context) => const ReportFloodPage(),
                         ),
                       );
                     },
@@ -579,22 +570,15 @@ class _DashboardState extends State<Dashboard> {
                   ),
 
                   const Divider(),
-
                 ],
               ),
             ),
-
-
-
 
             const Padding(
               padding: EdgeInsets.all(16),
               child: Text(
                 'MyFlood Malaysia v1.0',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: Colors.grey, fontSize: 12),
               ),
             ),
           ],
@@ -614,12 +598,9 @@ class _DashboardState extends State<Dashboard> {
         elevation: 0,
 
         leading: Builder(
-          builder: (context){
+          builder: (context) {
             return IconButton(
-              icon: const Icon(
-                Icons.menu,
-                color: Color(0xFF4A45D6),
-              ),
+              icon: const Icon(Icons.menu, color: Color(0xFF4A45D6)),
               onPressed: () {
                 Scaffold.of(context).openDrawer();
               },
@@ -639,10 +620,7 @@ class _DashboardState extends State<Dashboard> {
             ),
             Text(
               'Real-time Flood & Weather Info',
-              style: TextStyle(
-                color: Colors.grey,
-                fontSize: 10,
-              ),
+              style: TextStyle(color: Colors.grey, fontSize: 10),
             ),
           ],
         ),
@@ -659,11 +637,7 @@ class _DashboardState extends State<Dashboard> {
                 ),
                 onPressed: _openNotificationsPage,
               ),
-              Positioned(
-                right: 10,
-                top: 9,
-                child: _alertBadge(compact: true),
-              ),
+              Positioned(right: 10, top: 9, child: _alertBadge(compact: true)),
             ],
           ),
         ],
@@ -676,22 +650,25 @@ class _DashboardState extends State<Dashboard> {
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(
-              16,
-              14,
-              16,
-              20,
-            ),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
 
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const AnnouncementCarousel(),
+                AnnouncementCarousel(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AnnouncementsPage(),
+                      ),
+                    );
+                  },
+                ),
                 FutureBuilder<FloodStationSummary>(
                   future: floodData,
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState ==
-                        ConnectionState.waiting) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
                       return _floodLoadingCard();
                     } else if (snapshot.hasError) {
                       return _floodErrorCard(snapshot.error.toString());
@@ -712,23 +689,16 @@ class _DashboardState extends State<Dashboard> {
                 FutureBuilder<List<Forecast>>(
                   future: forecastData,
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState ==
-                        ConnectionState.waiting) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
                       return _weatherLoadingCard();
                     } else if (snapshot.hasError) {
-                      return _weatherErrorCard(
-                        snapshot.error.toString(),
-                      );
-                    } else if (snapshot.hasData &&
-                        snapshot.data!.isNotEmpty) {
-                      final forecast =
-                          snapshot.data!.first;
+                      return _weatherErrorCard(snapshot.error.toString());
+                    } else if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                      final forecast = snapshot.data!.first;
 
                       return _weatherCard(forecast);
                     } else {
-                      return _weatherErrorCard(
-                        'No weather data available.',
-                      );
+                      return _weatherErrorCard('No weather data available.');
                     }
                   },
                 ),
@@ -738,8 +708,7 @@ class _DashboardState extends State<Dashboard> {
                 FutureBuilder<FloodStationSummary>(
                   future: floodData,
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState ==
-                        ConnectionState.waiting) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
                       return _stationSummaryLoading();
                     } else if (snapshot.hasError) {
                       return _floodErrorCard(snapshot.error.toString());
@@ -755,10 +724,7 @@ class _DashboardState extends State<Dashboard> {
 
                 const Text(
                   'Quick Actions',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
 
                 const SizedBox(height: 10),
@@ -768,8 +734,7 @@ class _DashboardState extends State<Dashboard> {
                     Expanded(
                       child: _actionCard(
                         icon: Icons.cloud_outlined,
-                        iconColor:
-                        const Color(0xFF514BD6),
+                        iconColor: const Color(0xFF514BD6),
                         title: 'Weather',
                         subtitle: 'Forecast by area',
                         onPressed: _showWeatherDetails,
@@ -781,16 +746,14 @@ class _DashboardState extends State<Dashboard> {
                     Expanded(
                       child: _actionCard(
                         icon: Icons.bookmark_border,
-                        iconColor:
-                        const Color(0xFF16B86D),
+                        iconColor: const Color(0xFF16B86D),
                         title: 'Saved rivers',
                         subtitle: 'Your watchlist',
                         onPressed: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) =>
-                              const SavedRiversPage(),
+                              builder: (context) => const SavedRiversPage(),
                             ),
                           );
                         },
@@ -851,33 +814,24 @@ class _DashboardState extends State<Dashboard> {
         color: Colors.white,
 
         child: Row(
-          mainAxisAlignment:
-          MainAxisAlignment.spaceAround,
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             Column(
-              mainAxisAlignment:
-              MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 IconButton(
-                  icon: const Icon(
-                    Icons.home,
-                    color: Color(0xFF4A45D6),
-                  ),
+                  icon: const Icon(Icons.home, color: Color(0xFF4A45D6)),
                   onPressed: () {},
                 ),
                 const Text(
                   'Home',
-                  style: TextStyle(
-                    color: Color(0xFF4A45D6),
-                    fontSize: 10,
-                  ),
+                  style: TextStyle(color: Color(0xFF4A45D6), fontSize: 10),
                 ),
               ],
             ),
 
             Column(
-              mainAxisAlignment:
-              MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Stack(
                   children: [
@@ -888,48 +842,33 @@ class _DashboardState extends State<Dashboard> {
                       ),
                       onPressed: _openAlertsPage,
                     ),
-                    Positioned(
-                      right: 5,
-                      top: 2,
-                      child: _alertBadge(),
-                    ),
+                    Positioned(right: 5, top: 2, child: _alertBadge()),
                   ],
                 ),
                 const Text(
                   'Alerts',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 10,
-                  ),
+                  style: TextStyle(color: Colors.grey, fontSize: 10),
                 ),
               ],
             ),
 
             Column(
-              mainAxisAlignment:
-              MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 IconButton(
-                  icon: const Icon(
-                    Icons.person_outline,
-                    color: Colors.grey,
-                  ),
+                  icon: const Icon(Icons.person_outline, color: Colors.grey),
                   onPressed: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>
-                        const ProfilePage(),
+                        builder: (context) => const ProfilePage(),
                       ),
                     );
                   },
                 ),
                 const Text(
                   'Profile',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 10,
-                  ),
+                  style: TextStyle(color: Colors.grey, fontSize: 10),
                 ),
               ],
             ),
@@ -985,7 +924,9 @@ class _DashboardState extends State<Dashboard> {
         child: Row(
           children: [
             Icon(
-              hasRisk ? Icons.warning_amber_rounded : Icons.check_circle_outline,
+              hasRisk
+                  ? Icons.warning_amber_rounded
+                  : Icons.check_circle_outline,
               color: Colors.white,
               size: 28,
             ),
@@ -994,8 +935,7 @@ class _DashboardState extends State<Dashboard> {
 
             Expanded(
               child: Column(
-                crossAxisAlignment:
-                CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     statusTitle,
@@ -1009,10 +949,7 @@ class _DashboardState extends State<Dashboard> {
 
                   Text(
                     statusDetails,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                    ),
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
                   ),
 
                   Text(
@@ -1034,10 +971,7 @@ class _DashboardState extends State<Dashboard> {
               ),
             ),
 
-            const Icon(
-              Icons.chevron_right,
-              color: Colors.white,
-            ),
+            const Icon(Icons.chevron_right, color: Colors.white),
           ],
         ),
       ),
@@ -1053,7 +987,6 @@ class _DashboardState extends State<Dashboard> {
     if (dateTime == null) {
       return value;
     }
-
 
     String twoDigits(int number) => number.toString().padLeft(2, '0');
 
@@ -1118,31 +1051,18 @@ class _DashboardState extends State<Dashboard> {
       onTap: _openSearchPage,
       decoration: InputDecoration(
         hintText: 'Search a river or station',
-        hintStyle: const TextStyle(
-          fontSize: 13,
-          color: Colors.grey,
-        ),
-        prefixIcon: const Icon(
-          Icons.search,
-          color: Colors.grey,
-        ),
+        hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
+        prefixIcon: const Icon(Icons.search, color: Colors.grey),
         filled: true,
         fillColor: Colors.white,
-        contentPadding:
-        const EdgeInsets.symmetric(
-          vertical: 12,
-        ),
+        contentPadding: const EdgeInsets.symmetric(vertical: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(22),
-          borderSide: BorderSide(
-            color: Colors.grey.shade200,
-          ),
+          borderSide: BorderSide(color: Colors.grey.shade200),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(22),
-          borderSide: BorderSide(
-            color: Colors.grey.shade200,
-          ),
+          borderSide: BorderSide(color: Colors.grey.shade200),
         ),
       ),
     );
@@ -1174,8 +1094,7 @@ class _DashboardState extends State<Dashboard> {
 
           Expanded(
             child: Column(
-              crossAxisAlignment:
-              CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   '$_weatherLocationName Weather',
@@ -1189,20 +1108,14 @@ class _DashboardState extends State<Dashboard> {
 
                 Text(
                   _translateWeather(forecast.summaryForecast),
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
 
                 const SizedBox(height: 3),
 
                 Text(
                   forecast.date,
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 10,
-                  ),
+                  style: const TextStyle(color: Colors.grey, fontSize: 10),
                 ),
               ],
             ),
@@ -1210,7 +1123,7 @@ class _DashboardState extends State<Dashboard> {
 
           Text(
             '${forecast.minTemp}°C\n'
-                '${forecast.maxTemp}°C',
+            '${forecast.maxTemp}°C',
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: Color(0xFF4142C7),
@@ -1233,9 +1146,7 @@ class _DashboardState extends State<Dashboard> {
         borderRadius: BorderRadius.circular(16),
       ),
 
-      child: const Center(
-        child: CircularProgressIndicator(),
-      ),
+      child: const Center(child: CircularProgressIndicator()),
     );
   }
 
@@ -1251,31 +1162,22 @@ class _DashboardState extends State<Dashboard> {
 
       child: Row(
         children: [
-          const Icon(
-            Icons.cloud_off,
-            color: Colors.red,
-          ),
+          const Icon(Icons.cloud_off, color: Colors.red),
 
           const SizedBox(width: 12),
 
           Expanded(
             child: Column(
-              crossAxisAlignment:
-              CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
                   'Unable to load weather',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
 
                 Text(
                   errorMessage,
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 11,
-                  ),
+                  style: const TextStyle(color: Colors.grey, fontSize: 11),
                 ),
               ],
             ),
@@ -1315,11 +1217,7 @@ class _DashboardState extends State<Dashboard> {
               Row(
                 children: [
                   if (icon != null) ...[
-                    Icon(
-                      icon,
-                      color: numberColor,
-                      size: 21,
-                    ),
+                    Icon(icon, color: numberColor, size: 21),
                     const SizedBox(width: 6),
                   ],
                   Text(
@@ -1347,10 +1245,7 @@ class _DashboardState extends State<Dashboard> {
                     child: Text(
                       subtitle,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontSize: 10,
-                      ),
+                      style: const TextStyle(color: Colors.grey, fontSize: 10),
                     ),
                   ),
                   if (onTap != null)
@@ -1392,7 +1287,7 @@ class _DashboardState extends State<Dashboard> {
                   return _statCard(
                     number: snapshot.connectionState == ConnectionState.waiting
                         ? '...'
-                        :count.toString(),
+                        : count.toString(),
                     title: 'Rainfall Stations',
                     subtitle: 'Live and 6-day history',
                     icon: Icons.thunderstorm_outlined,
@@ -1402,8 +1297,7 @@ class _DashboardState extends State<Dashboard> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) =>
-                          const HeavyRainStationsPage(),
+                          builder: (context) => const HeavyRainStationsPage(),
                         ),
                       );
                     },
@@ -1445,10 +1339,7 @@ class _DashboardState extends State<Dashboard> {
                   ),
                   Text(
                     '${summary.waterLevelStations} water-level stations checked',
-                    style: const TextStyle(
-                      color: Colors.grey,
-                      fontSize: 10,
-                    ),
+                    style: const TextStyle(color: Colors.grey, fontSize: 10),
                   ),
                 ],
               ),
@@ -1534,31 +1425,20 @@ class _DashboardState extends State<Dashboard> {
         ),
 
         child: Column(
-          crossAxisAlignment:
-          CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              icon,
-              color: iconColor,
-              size: 25,
-            ),
+            Icon(icon, color: iconColor, size: 25),
 
             const Spacer(),
 
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
             ),
 
             Text(
               subtitle,
-              style: const TextStyle(
-                color: Colors.grey,
-                fontSize: 10,
-              ),
+              style: const TextStyle(color: Colors.grey, fontSize: 10),
             ),
           ],
         ),
@@ -1581,36 +1461,24 @@ class _DashboardState extends State<Dashboard> {
               future: forecastData,
 
               builder: (context, snapshot) {
-                if (snapshot.connectionState ==
-                    ConnectionState.waiting) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
                   return const SizedBox(
                     height: 250,
-                    child: Center(
-                      child: CircularProgressIndicator(),
-                    ),
+                    child: Center(child: CircularProgressIndicator()),
                   );
                 }
 
                 if (snapshot.hasError) {
                   return SizedBox(
                     height: 250,
-                    child: Center(
-                      child: Text(
-                        'Error: ${snapshot.error}',
-                      ),
-                    ),
+                    child: Center(child: Text('Error: ${snapshot.error}')),
                   );
                 }
 
-                if (!snapshot.hasData ||
-                    snapshot.data!.isEmpty) {
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return const SizedBox(
                     height: 250,
-                    child: Center(
-                      child: Text(
-                        'No forecast data available',
-                      ),
-                    ),
+                    child: Center(child: Text('No forecast data available')),
                   );
                 }
 
@@ -1640,26 +1508,22 @@ class _DashboardState extends State<Dashboard> {
                             padding: const EdgeInsets.only(bottom: 30),
                             itemCount: forecasts.length,
                             itemBuilder: (context, index) {
-                              final forecast =
-                              forecasts[index];
+                              final forecast = forecasts[index];
 
                               return ListTile(
                                 leading: const Icon(
                                   Icons.cloud_outlined,
                                   color: Color(0xFF514BD6),
                                 ),
-                                title: Text(
-                                  forecast.date,
-                                ),
+                                title: Text(forecast.date),
                                 subtitle: Text(
                                   _translateWeather(forecast.summaryForecast),
                                 ),
                                 trailing: Text(
                                   '${forecast.minTemp}°C - '
-                                      '${forecast.maxTemp}°C',
+                                  '${forecast.maxTemp}°C',
                                   style: const TextStyle(
-                                    fontWeight:
-                                    FontWeight.bold,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               );

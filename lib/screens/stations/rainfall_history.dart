@@ -20,7 +20,8 @@ class RainfallHistoryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final history = station.dailyRainfall.entries.toList();
-    final total = history.fold<double>(0, (sum, item) => sum + item.value) +
+    final total =
+        history.fold<double>(0, (sum, item) => sum + item.value) +
         station.rainfall;
     final currentColor = _color(station.rainfall);
 
@@ -30,32 +31,64 @@ class RainfallHistoryPage extends StatelessWidget {
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF171724),
         elevation: 0,
-        title: Text(station.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        title: Text(
+          station.name,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          Text('${station.district}, ${station.state}', style: const TextStyle(color: Colors.grey)),
+          Text(
+            '${station.district}, ${station.state}',
+            style: const TextStyle(color: Colors.grey),
+          ),
           const SizedBox(height: 24),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('${station.rainfall.toStringAsFixed(1)} mm/hr', style: const TextStyle(fontSize: 30, fontWeight: FontWeight.bold)),
-                  Text('${station.intensity} intensity', style: TextStyle(color: currentColor, fontSize: 16, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Text('Updated ${station.lastUpdated}', style: const TextStyle(color: Colors.grey)),
-                ]),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${station.rainfall.toStringAsFixed(1)} mm/hr',
+                      style: const TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      '${station.intensity} intensity',
+                      style: TextStyle(
+                        color: currentColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Updated ${station.lastUpdated}',
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                  ],
+                ),
               ),
               Icon(Icons.thunderstorm_outlined, color: currentColor, size: 36),
             ],
           ),
           const SizedBox(height: 34),
-          const Text('Previous 6 days', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          const Text(
+            'Previous 6 days',
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 10),
           Container(
-            decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE0E0E0)), borderRadius: BorderRadius.circular(14)),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: const Color(0xFFE0E0E0)),
+              borderRadius: BorderRadius.circular(14),
+            ),
             clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
@@ -67,12 +100,18 @@ class RainfallHistoryPage extends StatelessWidget {
           const SizedBox(height: 20),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE0E0E0)), borderRadius: BorderRadius.circular(14)),
-            child: Column(children: [
-              _summaryRow('6-day total', '${total.toStringAsFixed(1)} mm'),
-              const Divider(height: 18),
-              _summaryRow('Station type', 'Rainfall (JPS)'),
-            ]),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: const Color(0xFFE0E0E0)),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              children: [
+                _summaryRow('6-day total', '${total.toStringAsFixed(1)} mm'),
+                const Divider(height: 18),
+                _summaryRow('Station type', 'Rainfall (JPS)'),
+              ],
+            ),
           ),
         ],
       ),
@@ -84,12 +123,32 @@ class RainfallHistoryPage extends StatelessWidget {
     return Container(
       color: highlight ? _background(value) : Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text(date, style: TextStyle(fontWeight: highlight ? FontWeight.bold : FontWeight.normal)),
-        Text('${value.toStringAsFixed(1)} mm', style: TextStyle(color: value > 0 ? color : Colors.grey, fontWeight: highlight ? FontWeight.bold : FontWeight.normal)),
-      ]),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            date,
+            style: TextStyle(
+              fontWeight: highlight ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+          Text(
+            '${value.toStringAsFixed(1)} mm',
+            style: TextStyle(
+              color: value > 0 ? color : Colors.grey,
+              fontWeight: highlight ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _summaryRow(String label, String value) => Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(label), Text(value, style: const TextStyle(fontWeight: FontWeight.bold))]);
+  Widget _summaryRow(String label, String value) => Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      Text(label),
+      Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+    ],
+  );
 }

@@ -12,7 +12,7 @@ class NotificationsPage extends StatefulWidget {
 
 class _NotificationsPageState extends State<NotificationsPage> {
   final NotificationDatabaseService _databaseService =
-  NotificationDatabaseService();
+      NotificationDatabaseService();
 
   List<NotificationModel> _notifications = [];
 
@@ -26,15 +26,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
   // Retrieve notifications from SQLite
   Future<void> _loadNotifications() async {
-    List<NotificationModel> notifications =
-    await _databaseService.getNotifications();
+    List<NotificationModel> notifications = await _databaseService
+        .getNotifications();
 
     // Insert sample notifications when database is empty
     if (notifications.isEmpty) {
       await _insertSampleNotifications();
 
-      notifications =
-      await _databaseService.getNotifications();
+      notifications = await _databaseService.getNotifications();
     }
 
     if (!mounted) {
@@ -52,8 +51,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
     await _databaseService.insertNotification(
       NotificationModel(
         title: 'Water level alert',
-        message:
-        'The water level at Sungai Klang has reached Alert level.',
+        message: 'The water level at Sungai Klang has reached Alert level.',
         time: '5 minutes ago',
         level: 'alert',
         isRead: false,
@@ -63,8 +61,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
     await _databaseService.insertNotification(
       NotificationModel(
         title: 'Heavy rainfall detected',
-        message:
-        'Heavy rainfall was recorded near your saved station.',
+        message: 'Heavy rainfall was recorded near your saved station.',
         time: '30 minutes ago',
         level: 'warning',
         isRead: false,
@@ -74,8 +71,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
     await _databaseService.insertNotification(
       NotificationModel(
         title: 'Water level returned to normal',
-        message:
-        'The water level at Sungai Gombak is now normal.',
+        message: 'The water level at Sungai Gombak is now normal.',
         time: '2 hours ago',
         level: 'normal',
         isRead: true,
@@ -120,9 +116,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
   }
 
   // Delete one notification
-  Future<void> _deleteNotification(
-      NotificationModel notification,
-      ) async {
+  Future<void> _deleteNotification(NotificationModel notification) async {
     if (notification.id == null) {
       return;
     }
@@ -158,9 +152,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_notifications.isEmpty) {
@@ -168,23 +160,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.notifications_none,
-              size: 70,
-              color: Colors.grey,
-            ),
+            Icon(Icons.notifications_none, size: 70, color: Colors.grey),
             SizedBox(height: 12),
             Text(
               'No notifications',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 6),
-            Text(
-              'Your water-level updates will appear here.',
-            ),
+            Text('Your water-level updates will appear here.'),
           ],
         ),
       );
@@ -213,10 +196,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 color: Colors.red,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
-                Icons.delete,
-                color: Colors.white,
-              ),
+              child: const Icon(Icons.delete, color: Colors.white),
             ),
             child: Card(
               margin: const EdgeInsets.only(bottom: 12),
@@ -227,10 +207,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 contentPadding: const EdgeInsets.all(14),
                 leading: CircleAvatar(
                   backgroundColor: color.withOpacity(0.15),
-                  child: Icon(
-                    _getIcon(notification.level),
-                    color: color,
-                  ),
+                  child: Icon(_getIcon(notification.level), color: color),
                 ),
                 title: Text(
                   notification.title,
@@ -243,8 +220,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 subtitle: Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Column(
-                    crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(notification.message),
                       const SizedBox(height: 6),
@@ -261,13 +237,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 trailing: notification.isRead
                     ? null
                     : Container(
-                  width: 9,
-                  height: 9,
-                  decoration: const BoxDecoration(
-                    color: Colors.blue,
-                    shape: BoxShape.circle,
-                  ),
-                ),
+                        width: 9,
+                        height: 9,
+                        decoration: const BoxDecoration(
+                          color: Colors.blue,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
                 onTap: () {
                   _markAsRead(notification);
                 },

@@ -12,15 +12,12 @@ class CommunityCommentsPage extends StatefulWidget {
   });
 
   @override
-  State<CommunityCommentsPage> createState() =>
-      _CommunityCommentsPageState();
+  State<CommunityCommentsPage> createState() => _CommunityCommentsPageState();
 }
 
-class _CommunityCommentsPageState
-    extends State<CommunityCommentsPage> {
+class _CommunityCommentsPageState extends State<CommunityCommentsPage> {
   final SupabaseClient _supabase = Supabase.instance.client;
-  final TextEditingController _commentController =
-  TextEditingController();
+  final TextEditingController _commentController = TextEditingController();
 
   List<Map<String, dynamic>> _comments = [];
   final Map<String, Map<String, dynamic>> _profiles = {};
@@ -52,8 +49,7 @@ class _CommunityCommentsPageState
           .eq('post_id', widget.postId)
           .order('created_at', ascending: true);
 
-      final comments =
-      List<Map<String, dynamic>>.from(response);
+      final comments = List<Map<String, dynamic>>.from(response);
 
       final userIds = comments
           .map((comment) => comment['user_id']?.toString())
@@ -69,8 +65,7 @@ class _CommunityCommentsPageState
             .select('id, full_name, profile_image_url')
             .inFilter('id', userIds);
 
-        final profiles =
-        List<Map<String, dynamic>>.from(profileResponse);
+        final profiles = List<Map<String, dynamic>>.from(profileResponse);
 
         for (final profile in profiles) {
           final id = profile['id']?.toString();
@@ -130,9 +125,7 @@ class _CommunityCommentsPageState
     if (commentText.length > 500) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Comment cannot contain more than 500 characters',
-          ),
+          content: Text('Comment cannot contain more than 500 characters'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -181,9 +174,7 @@ class _CommunityCommentsPageState
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Delete Comment'),
-          content: const Text(
-            'Are you sure you want to delete this comment?',
-          ),
+          content: const Text('Are you sure you want to delete this comment?'),
           actions: [
             TextButton(
               onPressed: () {
@@ -213,10 +204,7 @@ class _CommunityCommentsPageState
 
   Future<void> _deleteComment(dynamic commentId) async {
     try {
-      await _supabase
-          .from('community_comments')
-          .delete()
-          .eq('id', commentId);
+      await _supabase.from('community_comments').delete().eq('id', commentId);
 
       if (!mounted) return;
 
@@ -245,9 +233,7 @@ class _CommunityCommentsPageState
       return '';
     }
 
-    final date = DateTime.tryParse(
-      value.toString(),
-    )?.toLocal();
+    final date = DateTime.tryParse(value.toString())?.toLocal();
 
     if (date == null) {
       return '';
@@ -290,14 +276,10 @@ class _CommunityCommentsPageState
       return words.first[0].toUpperCase();
     }
 
-    return '${words.first[0]}${words.last[0]}'
-        .toUpperCase();
+    return '${words.first[0]}${words.last[0]}'.toUpperCase();
   }
 
-  Widget _buildAvatar({
-    required String name,
-    required String? imageUrl,
-  }) {
+  Widget _buildAvatar({required String name, required String? imageUrl}) {
     if (imageUrl != null && imageUrl.trim().isNotEmpty) {
       return CircleAvatar(
         radius: 20,
@@ -325,17 +307,13 @@ class _CommunityCommentsPageState
     final userId = comment['user_id']?.toString() ?? '';
     final profile = _profiles[userId];
 
-    final profileName =
-        profile?['full_name']?.toString().trim() ?? '';
+    final profileName = profile?['full_name']?.toString().trim() ?? '';
 
-    final authorName =
-    profileName.isEmpty ? 'Community User' : profileName;
+    final authorName = profileName.isEmpty ? 'Community User' : profileName;
 
-    final imageUrl =
-    profile?['profile_image_url']?.toString();
+    final imageUrl = profile?['profile_image_url']?.toString();
 
-    final currentUserId =
-        _supabase.auth.currentUser?.id;
+    final currentUserId = _supabase.auth.currentUser?.id;
 
     final isOwner = currentUserId == userId;
 
@@ -344,10 +322,7 @@ class _CommunityCommentsPageState
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildAvatar(
-            name: authorName,
-            imageUrl: imageUrl,
-          ),
+          _buildAvatar(name: authorName, imageUrl: imageUrl),
           const SizedBox(width: 10),
           Expanded(
             child: Container(
@@ -383,9 +358,7 @@ class _CommunityCommentsPageState
                           constraints: const BoxConstraints(),
                           onSelected: (value) {
                             if (value == 'delete') {
-                              _confirmDeleteComment(
-                                comment['id'],
-                              );
+                              _confirmDeleteComment(comment['id']);
                             }
                           },
                           itemBuilder: (context) {
@@ -411,10 +384,7 @@ class _CommunityCommentsPageState
                   const SizedBox(height: 5),
                   Text(
                     comment['comment_text']?.toString() ?? '',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      height: 1.4,
-                    ),
+                    style: const TextStyle(fontSize: 14, height: 1.4),
                   ),
                 ],
               ),
@@ -428,9 +398,7 @@ class _CommunityCommentsPageState
   Widget _buildCommentsList() {
     if (_isLoading) {
       return const Center(
-        child: CircularProgressIndicator(
-          color: Color(0xFF3730A3),
-        ),
+        child: CircularProgressIndicator(color: Color(0xFF3730A3)),
       );
     }
 
@@ -441,29 +409,19 @@ class _CommunityCommentsPageState
           physics: const AlwaysScrollableScrollPhysics(),
           children: const [
             SizedBox(height: 130),
-            Icon(
-              Icons.chat_bubble_outline,
-              size: 65,
-              color: Colors.grey,
-            ),
+            Icon(Icons.chat_bubble_outline, size: 65, color: Colors.grey),
             SizedBox(height: 14),
             Center(
               child: Text(
                 'No comments yet',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 16,
-                ),
+                style: TextStyle(color: Colors.grey, fontSize: 16),
               ),
             ),
             SizedBox(height: 5),
             Center(
               child: Text(
                 'Be the first person to comment.',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: Colors.grey, fontSize: 12),
               ),
             ),
           ],
@@ -490,11 +448,7 @@ class _CommunityCommentsPageState
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
         decoration: const BoxDecoration(
           color: Colors.white,
-          border: Border(
-            top: BorderSide(
-              color: Color(0xFFE3E3E8),
-            ),
-          ),
+          border: Border(top: BorderSide(color: Color(0xFFE3E3E8))),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -506,8 +460,7 @@ class _CommunityCommentsPageState
                 minLines: 1,
                 maxLines: 4,
                 maxLength: 500,
-                textCapitalization:
-                TextCapitalization.sentences,
+                textCapitalization: TextCapitalization.sentences,
                 decoration: InputDecoration(
                   hintText: 'Write a comment...',
                   counterText: '',
@@ -530,17 +483,16 @@ class _CommunityCommentsPageState
                 backgroundColor: const Color(0xFF3730A3),
                 foregroundColor: Colors.white,
               ),
-              onPressed:
-              _isSubmitting ? null : _submitComment,
+              onPressed: _isSubmitting ? null : _submitComment,
               icon: _isSubmitting
                   ? const SizedBox(
-                width: 19,
-                height: 19,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
+                      width: 19,
+                      height: 19,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : const Icon(Icons.send),
             ),
           ],
@@ -584,9 +536,7 @@ class _CommunityCommentsPageState
       ),
       body: Column(
         children: [
-          Expanded(
-            child: _buildCommentsList(),
-          ),
+          Expanded(child: _buildCommentsList()),
           _buildCommentInput(),
         ],
       ),

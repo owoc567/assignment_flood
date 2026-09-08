@@ -10,8 +10,7 @@ class ManageUsersPage extends StatefulWidget {
 
 class _ManageUsersPageState extends State<ManageUsersPage> {
   final SupabaseClient _supabase = Supabase.instance.client;
-  final TextEditingController _searchController =
-  TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
 
   bool _isLoading = true;
   String? _errorMessage;
@@ -41,9 +40,9 @@ class _ManageUsersPageState extends State<ManageUsersPage> {
       final data = await _supabase
           .from('profiles')
           .select(
-        'id, full_name, email, phone_number, '
+            'id, full_name, email, phone_number, '
             'profile_image_url, role, created_at',
-      )
+          )
           .order('created_at', ascending: false);
 
       if (!mounted) return;
@@ -68,18 +67,14 @@ class _ManageUsersPageState extends State<ManageUsersPage> {
 
     setState(() {
       if (keyword.isEmpty) {
-        _filteredUsers =
-        List<Map<String, dynamic>>.from(_users);
+        _filteredUsers = List<Map<String, dynamic>>.from(_users);
       } else {
         _filteredUsers = _users.where((user) {
-          final name =
-              user['full_name']?.toString().toLowerCase() ?? '';
+          final name = user['full_name']?.toString().toLowerCase() ?? '';
 
-          final email =
-              user['email']?.toString().toLowerCase() ?? '';
+          final email = user['email']?.toString().toLowerCase() ?? '';
 
-          final role =
-              user['role']?.toString().toLowerCase() ?? '';
+          final role = user['role']?.toString().toLowerCase() ?? '';
 
           return name.contains(keyword) ||
               email.contains(keyword) ||
@@ -100,8 +95,7 @@ class _ManageUsersPageState extends State<ManageUsersPage> {
   }
 
   Widget _buildUserCard(Map<String, dynamic> user) {
-    final fullName =
-        user['full_name']?.toString().trim() ?? '';
+    final fullName = user['full_name']?.toString().trim() ?? '';
 
     final email = user['email']?.toString() ?? 'No email';
     final phone = user['phone_number']?.toString();
@@ -115,9 +109,7 @@ class _ManageUsersPageState extends State<ManageUsersPage> {
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15),
-        side: const BorderSide(
-          color: Color(0xFFE4E4EA),
-        ),
+        side: const BorderSide(color: Color(0xFFE4E4EA)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(15),
@@ -127,15 +119,11 @@ class _ManageUsersPageState extends State<ManageUsersPage> {
             CircleAvatar(
               radius: 27,
               backgroundColor: const Color(0xFFE8E7FF),
-              backgroundImage:
-              imageUrl != null && imageUrl.isNotEmpty
+              backgroundImage: imageUrl != null && imageUrl.isNotEmpty
                   ? NetworkImage(imageUrl)
                   : null,
               child: imageUrl == null || imageUrl.isEmpty
-                  ? const Icon(
-                Icons.person,
-                color: Color(0xFF3730A3),
-              )
+                  ? const Icon(Icons.person, color: Color(0xFF3730A3))
                   : null,
             ),
 
@@ -149,9 +137,7 @@ class _ManageUsersPageState extends State<ManageUsersPage> {
                     children: [
                       Expanded(
                         child: Text(
-                          fullName.isEmpty
-                              ? 'No name'
-                              : fullName,
+                          fullName.isEmpty ? 'No name' : fullName,
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -168,8 +154,7 @@ class _ManageUsersPageState extends State<ManageUsersPage> {
                           color: isAdmin
                               ? const Color(0xFFFFE5E5)
                               : const Color(0xFFE8E7FF),
-                          borderRadius:
-                          BorderRadius.circular(15),
+                          borderRadius: BorderRadius.circular(15),
                         ),
                         child: Text(
                           isAdmin ? 'Admin' : 'User',
@@ -189,20 +174,14 @@ class _ManageUsersPageState extends State<ManageUsersPage> {
 
                   Text(
                     email,
-                    style: const TextStyle(
-                      color: Colors.grey,
-                      fontSize: 13,
-                    ),
+                    style: const TextStyle(color: Colors.grey, fontSize: 13),
                   ),
 
                   if (phone != null && phone.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
                       phone,
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontSize: 13,
-                      ),
+                      style: const TextStyle(color: Colors.grey, fontSize: 13),
                     ),
                   ],
 
@@ -210,10 +189,7 @@ class _ManageUsersPageState extends State<ManageUsersPage> {
 
                   Text(
                     'Joined: ${_formatDate(user['created_at'])}',
-                    style: const TextStyle(
-                      color: Colors.grey,
-                      fontSize: 11,
-                    ),
+                    style: const TextStyle(color: Colors.grey, fontSize: 11),
                   ),
                 ],
               ),
@@ -246,12 +222,12 @@ class _ManageUsersPageState extends State<ManageUsersPage> {
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                  onPressed: () {
-                    _searchController.clear();
-                    _searchUsers('');
-                  },
-                  icon: const Icon(Icons.clear),
-                )
+                        onPressed: () {
+                          _searchController.clear();
+                          _searchUsers('');
+                        },
+                        icon: const Icon(Icons.clear),
+                      )
                     : null,
                 filled: true,
                 fillColor: Colors.white,
@@ -267,9 +243,7 @@ class _ManageUsersPageState extends State<ManageUsersPage> {
             if (_isLoading)
               const Padding(
                 padding: EdgeInsets.only(top: 100),
-                child: Center(
-                  child: CircularProgressIndicator(),
-                ),
+                child: Center(child: CircularProgressIndicator()),
               )
             else if (_errorMessage != null)
               Padding(
@@ -295,23 +269,21 @@ class _ManageUsersPageState extends State<ManageUsersPage> {
                 ),
               )
             else if (_filteredUsers.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.only(top: 100),
-                  child: Center(
-                    child: Text('No users found'),
-                  ),
-                )
-              else ...[
-                  Text(
-                    '${_filteredUsers.length} account(s)',
-                    style: const TextStyle(
-                      color: Colors.grey,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  ..._filteredUsers.map(_buildUserCard),
-                ],
+              const Padding(
+                padding: EdgeInsets.only(top: 100),
+                child: Center(child: Text('No users found')),
+              )
+            else ...[
+              Text(
+                '${_filteredUsers.length} account(s)',
+                style: const TextStyle(
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 10),
+              ..._filteredUsers.map(_buildUserCard),
+            ],
           ],
         ),
       ),

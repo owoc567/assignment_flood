@@ -7,7 +7,6 @@ import 'manageSos.dart';
 import 'manageCommunity.dart';
 import 'adminProfile.dart';
 
-
 class AdminPage extends StatefulWidget {
   const AdminPage({super.key});
 
@@ -30,7 +29,6 @@ class _AdminPageState extends State<AdminPage> {
   int _activeSos = 0;
   int _communityPosts = 0;
   int _activeAnnouncements = 0;
-
 
   @override
   void initState() {
@@ -92,9 +90,7 @@ class _AdminPageState extends State<AdminPage> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to load dashboard: $error'),
-        ),
+        SnackBar(content: Text('Failed to load dashboard: $error')),
       );
     }
   }
@@ -114,21 +110,16 @@ class _AdminPageState extends State<AdminPage> {
     try {
       final profile = await _supabase
           .from('profiles')
-          .select(
-        'full_name, role, profile_image_url',
-      )
+          .select('full_name, role, profile_image_url')
           .eq('id', user.id)
           .maybeSingle();
 
       if (!mounted) return;
 
       setState(() {
-        _adminName =
-            profile?['full_name']?.toString() ??
-                'Administrator';
+        _adminName = profile?['full_name']?.toString() ?? 'Administrator';
 
-        _adminProfileImageUrl =
-            profile?['profile_image_url']?.toString();
+        _adminProfileImageUrl = profile?['profile_image_url']?.toString();
 
         _isLoadingProfile = false;
       });
@@ -149,9 +140,7 @@ class _AdminPageState extends State<AdminPage> {
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Sign Out'),
-          content: const Text(
-            'Are you sure you want to sign out?',
-          ),
+          content: const Text('Are you sure you want to sign out?'),
           actions: [
             TextButton(
               onPressed: () {
@@ -182,10 +171,7 @@ class _AdminPageState extends State<AdminPage> {
 
     if (!mounted) return;
 
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      '/',
-          (route) => false,
-    );
+    Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
   }
 
   Widget _buildSummaryCard({
@@ -200,9 +186,7 @@ class _AdminPageState extends State<AdminPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(15),
-          border: Border.all(
-            color: const Color(0xFFE6E6EC),
-          ),
+          border: Border.all(color: const Color(0xFFE6E6EC)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -210,27 +194,17 @@ class _AdminPageState extends State<AdminPage> {
             CircleAvatar(
               radius: 18,
               backgroundColor: color.withValues(alpha: 0.12),
-              child: Icon(
-                icon,
-                color: color,
-                size: 20,
-              ),
+              child: Icon(icon, color: color, size: 20),
             ),
             const SizedBox(height: 12),
             Text(
               value,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 3),
             Text(
               title,
-              style: const TextStyle(
-                color: Colors.grey,
-                fontSize: 11,
-              ),
+              style: const TextStyle(color: Colors.grey, fontSize: 11),
             ),
           ],
         ),
@@ -251,9 +225,7 @@ class _AdminPageState extends State<AdminPage> {
       color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(
-          color: Color(0xFFE6E6EC),
-        ),
+        side: const BorderSide(color: Color(0xFFE6E6EC)),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -269,17 +241,12 @@ class _AdminPageState extends State<AdminPage> {
                   color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(13),
                 ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 26,
-                ),
+                child: Icon(icon, color: color, size: 26),
               ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                  CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
@@ -300,10 +267,7 @@ class _AdminPageState extends State<AdminPage> {
                   ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right,
-                color: Colors.grey,
-              ),
+              const Icon(Icons.chevron_right, color: Colors.grey),
             ],
           ),
         ),
@@ -325,10 +289,7 @@ class _AdminPageState extends State<AdminPage> {
           children: [
             Text(
               'Admin Dashboard',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             Text(
               'MyFlood Malaysia',
@@ -371,10 +332,7 @@ class _AdminPageState extends State<AdminPage> {
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFF3730A3),
-                    Color(0xFF625BD9),
-                  ],
+                  colors: [Color(0xFF3730A3), Color(0xFF625BD9)],
                 ),
                 borderRadius: BorderRadius.circular(18),
               ),
@@ -383,37 +341,33 @@ class _AdminPageState extends State<AdminPage> {
                   CircleAvatar(
                     radius: 28,
                     backgroundColor: Colors.white,
-                    backgroundImage: _adminProfileImageUrl != null &&
-                        _adminProfileImageUrl!.isNotEmpty
+                    backgroundImage:
+                        _adminProfileImageUrl != null &&
+                            _adminProfileImageUrl!.isNotEmpty
                         ? NetworkImage(_adminProfileImageUrl!)
                         : null,
-                    child: _adminProfileImageUrl == null ||
-                        _adminProfileImageUrl!.isEmpty
+                    child:
+                        _adminProfileImageUrl == null ||
+                            _adminProfileImageUrl!.isEmpty
                         ? const Icon(
-                      Icons.admin_panel_settings,
-                      size: 32,
-                      color: Color(0xFF3730A3),
-                    )
+                            Icons.admin_panel_settings,
+                            size: 32,
+                            color: Color(0xFF3730A3),
+                          )
                         : null,
                   ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
-                      crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
                           'Welcome back,',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                          ),
+                          style: TextStyle(color: Colors.white70, fontSize: 12),
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          _isLoadingProfile
-                              ? 'Loading...'
-                              : _adminName,
+                          _isLoadingProfile ? 'Loading...' : _adminName,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 19,
@@ -423,10 +377,7 @@ class _AdminPageState extends State<AdminPage> {
                         const SizedBox(height: 3),
                         const Text(
                           'System Administrator',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 11,
-                          ),
+                          style: TextStyle(color: Colors.white70, fontSize: 11),
                         ),
                       ],
                     ),
@@ -439,10 +390,7 @@ class _AdminPageState extends State<AdminPage> {
 
             const Text(
               'System Overview',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 10),
@@ -471,23 +419,18 @@ class _AdminPageState extends State<AdminPage> {
 
             const SizedBox(height: 22),
 
-
             Row(
               children: [
                 _buildSummaryCard(
                   title: 'Total users',
-                  value: _isLoadingDashboard
-                      ? '...'
-                      : _totalUsers.toString(),
+                  value: _isLoadingDashboard ? '...' : _totalUsers.toString(),
                   icon: Icons.people_outline,
                   color: Colors.purple,
                 ),
                 const SizedBox(width: 10),
                 _buildSummaryCard(
                   title: 'Active SOS',
-                  value: _isLoadingDashboard
-                      ? '...'
-                      : _activeSos.toString(),
+                  value: _isLoadingDashboard ? '...' : _activeSos.toString(),
                   icon: Icons.sos,
                   color: Colors.red,
                 ),
@@ -500,9 +443,7 @@ class _AdminPageState extends State<AdminPage> {
               children: [
                 _buildSummaryCard(
                   title: 'Total reports',
-                  value: _isLoadingDashboard
-                      ? '...'
-                      : _totalReports.toString(),
+                  value: _isLoadingDashboard ? '...' : _totalReports.toString(),
                   icon: Icons.description_outlined,
                   color: Colors.blue,
                 ),
@@ -520,18 +461,12 @@ class _AdminPageState extends State<AdminPage> {
 
             const SizedBox(height: 22),
 
-
             const Text(
               'Administration',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 10),
-
-
 
             _buildAdminFunctionCard(
               title: 'Manage Flood Reports',
@@ -586,25 +521,22 @@ class _AdminPageState extends State<AdminPage> {
 
             _buildAdminFunctionCard(
               title: 'Manage Announcements',
-              subtitle:
-              'Send evacuation and warning announcements',
+              subtitle: 'Send evacuation and warning announcements',
               icon: Icons.campaign_outlined,
               color: const Color(0xFFE53935),
               onTap: () {
                 Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) =>
-                            const ManageAnnouncementsPage(),
-                    ),
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ManageAnnouncementsPage(),
+                  ),
                 );
               },
             ),
 
             _buildAdminFunctionCard(
               title: 'Manage Users',
-              subtitle:
-              'View, suspend and reactivate user accounts',
+              subtitle: 'View, suspend and reactivate user accounts',
               icon: Icons.people_outline,
               color: const Color(0xFF7B2CBF),
               onTap: () {

@@ -5,12 +5,10 @@ class ManageCommunityPage extends StatefulWidget {
   const ManageCommunityPage({super.key});
 
   @override
-  State<ManageCommunityPage> createState() =>
-      _ManageCommunityPageState();
+  State<ManageCommunityPage> createState() => _ManageCommunityPageState();
 }
 
-class _ManageCommunityPageState
-    extends State<ManageCommunityPage> {
+class _ManageCommunityPageState extends State<ManageCommunityPage> {
   final SupabaseClient _supabase = Supabase.instance.client;
 
   bool _isLoading = true;
@@ -34,9 +32,10 @@ class _ManageCommunityPageState
       final data = await _supabase
           .from('community_posts')
           .select(
-        'id, user_id, title, content, location, '
-            'post_type, is_verified, created_at',
-      )
+            'id, user_id, title, content, location, '
+                'post_type, is_verified, moderation_status, '
+                'moderated_by, moderated_at, created_at',
+          )
           .order('created_at', ascending: false);
 
       if (!mounted) return;
@@ -52,31 +51,88 @@ class _ManageCommunityPageState
         _isLoading = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to load posts: $error'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to load posts: $error')));
     }
   }
 
   List<Map<String, dynamic>> get _displayedPosts {
-    if (_filter == 'verified') {
-      return _posts.where((post) {
-        return post['is_verified'] == true;
-      }).toList();
+    if (_filter == 'all') {
+      return _posts;
     }
 
-    if (_filter == 'unverified') {
-      return _posts.where((post) {
-        return post['is_verified'] != true;
-      }).toList();
-    }
+    return _posts.where((post) {
+      final status =
+          post['moderation_status']?.toString() ?? 'pending';
 
-    return _posts;
+      return status == _filter;
+    }).toList();
   }
 
-  Future<void> _verifyPost(int postId) async {
+  Future<void> _confirmModeration(
+      int postId,
+      String newStatus,
+      ) async {
+    final isVerifying = newStatus == 'verified';
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(
+            isVerifying
+                ? 'Verify Community Post?'
+                : 'Reject Community Post?',
+          ),
+          content: Text(
+            isVerifying
+                ? 'Confirm that this community information is valid.'
+                : 'The post will be marked as rejected and hidden from other users.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor:
+                isVerifying ? Colors.green : Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
+              child: Text(
+                isVerifying ? 'Verify' : 'Reject',
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      await _updateModerationStatus(postId, newStatus);
+    }
+  }
+
+  Future<void> _updateModerationStatus(
+      int postId,
+      String newStatus,
+      ) async {
+    final admin = _supabase.auth.currentUser;
+
+    if (admin == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please sign in again')),
+      );
+      return;
+    }
+
     setState(() {
       _updatingPostId = postId;
     });
@@ -84,7 +140,13 @@ class _ManageCommunityPageState
     try {
       await _supabase
           .from('community_posts')
-          .update({'is_verified': true})
+          .update({
+        'moderation_status': newStatus,
+        'is_verified': newStatus == 'verified',
+        'moderated_by': admin.id,
+        'moderated_at':
+        DateTime.now().toUtc().toIso8601String(),
+      })
           .eq('id', postId);
 
       await _loadPosts();
@@ -92,8 +154,12 @@ class _ManageCommunityPageState
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Post verified successfully'),
+        SnackBar(
+          content: Text(
+            newStatus == 'verified'
+                ? 'Post verified successfully'
+                : 'Post rejected successfully',
+          ),
         ),
       );
     } catch (error) {
@@ -101,7 +167,9 @@ class _ManageCommunityPageState
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to verify post: $error'),
+          content: Text(
+            'Failed to update post: $error',
+          ),
         ),
       );
     } finally {
@@ -151,28 +219,21 @@ class _ManageCommunityPageState
     });
 
     try {
-      await _supabase
-          .from('community_posts')
-          .delete()
-          .eq('id', postId);
+      await _supabase.from('community_posts').delete().eq('id', postId);
 
       await _loadPosts();
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Spam post removed'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Spam post removed')));
     } catch (error) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to delete post: $error'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to delete post: $error')));
     } finally {
       if (mounted) {
         setState(() {
@@ -189,9 +250,7 @@ class _ManageCommunityPageState
       label: Text(label),
       selected: selected,
       selectedColor: const Color(0xFF3730A3),
-      labelStyle: TextStyle(
-        color: selected ? Colors.white : Colors.black,
-      ),
+      labelStyle: TextStyle(color: selected ? Colors.white : Colors.black),
       onSelected: (_) {
         setState(() {
           _filter = value;
@@ -200,17 +259,56 @@ class _ManageCommunityPageState
     );
   }
 
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'verified':
+        return Colors.green;
+      case 'rejected':
+        return Colors.red;
+      default:
+        return Colors.orange;
+    }
+  }
+
+  IconData _statusIcon(String status) {
+    switch (status) {
+      case 'verified':
+        return Icons.verified;
+      case 'rejected':
+        return Icons.cancel;
+      default:
+        return Icons.pending_outlined;
+    }
+  }
+
   Widget _postCard(Map<String, dynamic> post) {
     final postId = post['id'] as int;
-    final verified = post['is_verified'] == true;
+
+    final status =
+        post['moderation_status']?.toString() ?? 'pending';
+
     final isUpdating = _updatingPostId == postId;
+
+    final title =
+        post['title']?.toString() ?? 'Untitled post';
+
+    final content =
+        post['content']?.toString() ?? 'No content';
+
+    final postType =
+        post['post_type']?.toString() ?? 'General';
+
+    final location =
+        post['location']?.toString().trim() ?? '';
 
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 13),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: Color(0xFFE4E4EA)),
+        side: const BorderSide(
+          color: Color(0xFFE4E4EA),
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(15),
@@ -218,29 +316,55 @@ class _ManageCommunityPageState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: Text(
-                    post['title']?.toString() ?? 'Untitled post',
+                    title,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
                   ),
                 ),
-                Icon(
-                  verified
-                      ? Icons.verified
-                      : Icons.pending_outlined,
-                  color: verified ? Colors.green : Colors.orange,
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _statusColor(status)
+                        .withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _statusIcon(status),
+                        size: 14,
+                        color: _statusColor(status),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        status.toUpperCase(),
+                        style: TextStyle(
+                          color: _statusColor(status),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
 
-            const SizedBox(height: 5),
+            const SizedBox(height: 6),
 
             Text(
-              post['post_type']?.toString() ?? 'General',
+              postType,
               style: const TextStyle(
                 color: Color(0xFF3730A3),
                 fontWeight: FontWeight.w600,
@@ -251,11 +375,11 @@ class _ManageCommunityPageState
             const SizedBox(height: 10),
 
             Text(
-              post['content']?.toString() ?? 'No content',
+              content,
               style: const TextStyle(height: 1.4),
             ),
 
-            if (post['location'] != null) ...[
+            if (location.isNotEmpty) ...[
               const SizedBox(height: 10),
               Row(
                 children: [
@@ -267,7 +391,7 @@ class _ManageCommunityPageState
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      post['location'].toString(),
+                      location,
                       style: const TextStyle(
                         color: Colors.grey,
                         fontSize: 12,
@@ -282,8 +406,13 @@ class _ManageCommunityPageState
             const Divider(),
 
             if (isUpdating)
-              const Center(child: CircularProgressIndicator())
-            else
+              const Padding(
+                padding: EdgeInsets.all(12),
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else ...[
               Row(
                 children: [
                   Expanded(
@@ -292,21 +421,57 @@ class _ManageCommunityPageState
                         _deletePost(postId);
                       },
                       icon: const Icon(Icons.delete_outline),
-                      label: const Text('Remove Spam'),
+                      label: const Text('Delete'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.red,
                       ),
                     ),
                   ),
-                  if (!verified) ...[
+                ],
+              ),
+
+              const SizedBox(height: 8),
+
+              Row(
+                children: [
+                  if (status != 'rejected')
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          _confirmModeration(
+                            postId,
+                            'rejected',
+                          );
+                        },
+                        icon: const Icon(Icons.close),
+                        label: const Text('Reject'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                        ),
+                      ),
+                    ),
+
+                  if (status != 'rejected' &&
+                      status != 'verified')
                     const SizedBox(width: 10),
+
+                  if (status != 'verified')
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          _verifyPost(postId);
+                          _confirmModeration(
+                            postId,
+                            'verified',
+                          );
                         },
-                        icon: const Icon(Icons.verified_outlined),
-                        label: const Text('Verify'),
+                        icon: const Icon(
+                          Icons.verified_outlined,
+                        ),
+                        label: Text(
+                          status == 'rejected'
+                              ? 'Restore & Verify'
+                              : 'Verify',
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
                           const Color(0xFF3730A3),
@@ -314,9 +479,9 @@ class _ManageCommunityPageState
                         ),
                       ),
                     ),
-                  ],
                 ],
               ),
+            ],
           ],
         ),
       ),
@@ -341,10 +506,12 @@ class _ManageCommunityPageState
           children: [
             Wrap(
               spacing: 8,
+              runSpacing: 8,
               children: [
                 _filterChip('all', 'All'),
-                _filterChip('unverified', 'Unverified'),
+                _filterChip('pending', 'Pending'),
                 _filterChip('verified', 'Verified'),
+                _filterChip('rejected', 'Rejected'),
               ],
             ),
 
@@ -353,16 +520,12 @@ class _ManageCommunityPageState
             if (_isLoading)
               const Padding(
                 padding: EdgeInsets.only(top: 100),
-                child: Center(
-                  child: CircularProgressIndicator(),
-                ),
+                child: Center(child: CircularProgressIndicator()),
               )
             else if (displayedPosts.isEmpty)
               const Padding(
                 padding: EdgeInsets.only(top: 100),
-                child: Center(
-                  child: Text('No community posts found'),
-                ),
+                child: Center(child: Text('No community posts found')),
               )
             else
               ...displayedPosts.map(_postCard),

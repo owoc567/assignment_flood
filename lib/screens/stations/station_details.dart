@@ -5,10 +5,7 @@ import '../../services/saved_station_service.dart';
 class StationDetailsPage extends StatefulWidget {
   final FloodStation station;
 
-  const StationDetailsPage({
-    super.key,
-    required this.station,
-  });
+  const StationDetailsPage({super.key, required this.station});
 
   @override
   State<StationDetailsPage> createState() => _StationDetailsPageState();
@@ -163,11 +160,7 @@ class _StationDetailsPageState extends State<StationDetailsPage> {
               ),
               child: Column(
                 children: [
-                  const Icon(
-                    Icons.water,
-                    size: 45,
-                    color: Colors.blue,
-                  ),
+                  const Icon(Icons.water, size: 45, color: Colors.blue),
                   const SizedBox(height: 12),
                   Text(
                     station.name,
@@ -180,10 +173,7 @@ class _StationDetailsPageState extends State<StationDetailsPage> {
                   const SizedBox(height: 6),
                   Text(
                     'Station ID: ${station.id}',
-                    style: const TextStyle(
-                      color: Colors.grey,
-                      fontSize: 14,
-                    ),
+                    style: const TextStyle(color: Colors.grey, fontSize: 14),
                   ),
                   const SizedBox(height: 14),
                   Container(
@@ -211,10 +201,7 @@ class _StationDetailsPageState extends State<StationDetailsPage> {
 
             const Text(
               'Current water level',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 10),
@@ -228,11 +215,7 @@ class _StationDetailsPageState extends State<StationDetailsPage> {
               ),
               child: Column(
                 children: [
-                  const Icon(
-                    Icons.water_drop,
-                    color: Colors.white,
-                    size: 36,
-                  ),
+                  const Icon(Icons.water_drop, color: Colors.white, size: 36),
                   const SizedBox(height: 8),
                   Text(
                     '${station.waterLevel.toStringAsFixed(2)} m',
@@ -246,10 +229,7 @@ class _StationDetailsPageState extends State<StationDetailsPage> {
                   Text(
                     'Last updated: ${station.lastUpdated}',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                    ),
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
                   ),
                 ],
               ),
@@ -259,10 +239,7 @@ class _StationDetailsPageState extends State<StationDetailsPage> {
 
             const Text(
               'Station information',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 10),
@@ -287,10 +264,7 @@ class _StationDetailsPageState extends State<StationDetailsPage> {
 
             const Text(
               'Water level thresholds',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 10),
@@ -336,27 +310,19 @@ class _StationDetailsPageState extends State<StationDetailsPage> {
       ),
       child: Row(
         children: [
-          Icon(
-            icon,
-            color: const Color(0xFF3F51F3),
-          ),
+          Icon(icon, color: const Color(0xFF3F51F3)),
           const SizedBox(width: 14),
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(
-                color: Colors.grey,
-                fontSize: 14,
-              ),
+              style: const TextStyle(color: Colors.grey, fontSize: 14),
             ),
           ),
           Flexible(
             child: Text(
               value.isEmpty ? 'No data' : value,
               textAlign: TextAlign.right,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -376,38 +342,25 @@ class _StationDetailsPageState extends State<StationDetailsPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border(
-          left: BorderSide(
-            color: color,
-            width: 6,
-          ),
-        ),
+        border: Border(left: BorderSide(color: color, width: 6)),
       ),
       child: Row(
         children: [
           Container(
             width: 12,
             height: 12,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
           Text(
             value,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: color, fontWeight: FontWeight.bold),
           ),
         ],
       ),

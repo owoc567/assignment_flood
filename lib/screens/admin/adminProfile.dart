@@ -8,8 +8,7 @@ class AdminProfilePage extends StatefulWidget {
   const AdminProfilePage({super.key});
 
   @override
-  State<AdminProfilePage> createState() =>
-      _AdminProfilePageState();
+  State<AdminProfilePage> createState() => _AdminProfilePageState();
 }
 
 class _AdminProfilePageState extends State<AdminProfilePage> {
@@ -43,27 +42,22 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
       final profile = await _supabase
           .from('profiles')
           .select(
-        'full_name, email, phone_number, '
+            'full_name, email, phone_number, '
             'profile_image_url, role',
-      )
+          )
           .eq('id', currentUser.id)
           .single();
 
       if (!mounted) return;
 
       setState(() {
-        _fullName =
-            profile['full_name']?.toString() ?? 'Administrator';
+        _fullName = profile['full_name']?.toString() ?? 'Administrator';
 
-        _email = profile['email']?.toString() ??
-            currentUser.email ??
-            '';
+        _email = profile['email']?.toString() ?? currentUser.email ?? '';
 
-        _phoneNumber =
-            profile['phone_number']?.toString() ?? '';
+        _phoneNumber = profile['phone_number']?.toString() ?? '';
 
-        _profileImageUrl =
-            profile['profile_image_url']?.toString();
+        _profileImageUrl = profile['profile_image_url']?.toString();
 
         _isLoading = false;
       });
@@ -74,11 +68,9 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
         _isLoading = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to load profile: $error'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to load profile: $error')));
     }
   }
 
@@ -93,9 +85,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(
-          color: const Color(0xFFE4E4EA),
-        ),
+        border: Border.all(color: const Color(0xFFE4E4EA)),
       ),
       child: Row(
         children: [
@@ -106,10 +96,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
               color: const Color(0xFFE8E7FF),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              icon,
-              color: const Color(0xFF3730A3),
-            ),
+            child: Icon(icon, color: const Color(0xFF3730A3)),
           ),
           const SizedBox(width: 13),
           Expanded(
@@ -118,10 +105,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 11,
-                  ),
+                  style: const TextStyle(color: Colors.grey, fontSize: 11),
                 ),
                 const SizedBox(height: 3),
                 Text(
@@ -149,154 +133,142 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
         title: const Text('Admin Profile'),
       ),
       body: _isLoading
-          ? const Center(
-        child: CircularProgressIndicator(),
-      )
+          ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-        onRefresh: _loadProfile,
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            const SizedBox(height: 10),
-
-            Center(
-              child: Stack(
+              onRefresh: _loadProfile,
+              child: ListView(
+                padding: const EdgeInsets.all(20),
                 children: [
-                  CircleAvatar(
-                    radius: 65,
-                    backgroundColor:
-                    const Color(0xFFE8E7FF),
-                    backgroundImage:
-                    _profileImageUrl != null &&
-                        _profileImageUrl!.isNotEmpty
-                        ? NetworkImage(
-                      _profileImageUrl!,
-                    )
-                        : null,
-                    child: _profileImageUrl == null ||
-                        _profileImageUrl!.isEmpty
-                        ? const Icon(
-                      Icons.admin_panel_settings,
-                      size: 65,
-                      color: Color(0xFF3730A3),
-                    )
-                        : null,
+                  const SizedBox(height: 10),
+
+                  Center(
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 65,
+                          backgroundColor: const Color(0xFFE8E7FF),
+                          backgroundImage:
+                              _profileImageUrl != null &&
+                                  _profileImageUrl!.isNotEmpty
+                              ? NetworkImage(_profileImageUrl!)
+                              : null,
+                          child:
+                              _profileImageUrl == null ||
+                                  _profileImageUrl!.isEmpty
+                              ? const Icon(
+                                  Icons.admin_panel_settings,
+                                  size: 65,
+                                  color: Color(0xFF3730A3),
+                                )
+                              : null,
+                        ),
+                        Positioned(
+                          right: 1,
+                          bottom: 1,
+                          child: Container(
+                            padding: const EdgeInsets.all(7),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF3730A3),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.verified,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  Positioned(
-                    right: 1,
-                    bottom: 1,
-                    child: Container(
-                      padding: const EdgeInsets.all(7),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF3730A3),
-                        shape: BoxShape.circle,
+
+                  const SizedBox(height: 17),
+
+                  Text(
+                    _fullName,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 23,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  const Text(
+                    'System Administrator',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFF3730A3),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  _informationTile(
+                    icon: Icons.email_outlined,
+                    title: 'Email',
+                    value: _email,
+                  ),
+
+                  _informationTile(
+                    icon: Icons.phone_outlined,
+                    title: 'Phone Number',
+                    value: _phoneNumber,
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final updated = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const EditProfilePage(),
+                          ),
+                        );
+
+                        if (updated == true) {
+                          await _loadProfile();
+                        }
+                      },
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('Edit Profile'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF3730A3),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      child: const Icon(
-                        Icons.verified,
-                        color: Colors.white,
-                        size: 20,
+                    ),
+                  ),
+
+                  const SizedBox(height: 11),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ChangePasswordPage(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.lock_outline),
+                      label: const Text('Change Password'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF3730A3),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-
-            const SizedBox(height: 17),
-
-            Text(
-              _fullName,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 23,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 6),
-
-            const Text(
-              'System Administrator',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Color(0xFF3730A3),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-
-            const SizedBox(height: 28),
-
-            _informationTile(
-              icon: Icons.email_outlined,
-              title: 'Email',
-              value: _email,
-            ),
-
-            _informationTile(
-              icon: Icons.phone_outlined,
-              title: 'Phone Number',
-              value: _phoneNumber,
-            ),
-
-            const SizedBox(height: 10),
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  final updated = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                      const EditProfilePage(),
-                    ),
-                  );
-
-                  if (updated == true) {
-                    await _loadProfile();
-                  }
-                },
-                icon: const Icon(Icons.edit_outlined),
-                label: const Text('Edit Profile'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                  const Color(0xFF3730A3),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 14,
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 11),
-
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                      const ChangePasswordPage(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.lock_outline),
-                label: const Text('Change Password'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor:
-                  const Color(0xFF3730A3),
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 14,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

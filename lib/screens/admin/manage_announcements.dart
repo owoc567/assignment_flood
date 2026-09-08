@@ -9,8 +9,7 @@ class ManageAnnouncementsPage extends StatefulWidget {
       _ManageAnnouncementsPageState();
 }
 
-class _ManageAnnouncementsPageState
-    extends State<ManageAnnouncementsPage> {
+class _ManageAnnouncementsPageState extends State<ManageAnnouncementsPage> {
   final SupabaseClient _supabase = Supabase.instance.client;
 
   List<Map<String, dynamic>> _announcements = [];
@@ -32,8 +31,7 @@ class _ManageAnnouncementsPageState
       if (!mounted) return;
 
       setState(() {
-        _announcements =
-        List<Map<String, dynamic>>.from(response);
+        _announcements = List<Map<String, dynamic>>.from(response);
         _isLoading = false;
       });
     } catch (error) {
@@ -43,17 +41,11 @@ class _ManageAnnouncementsPageState
         _isLoading = false;
       });
 
-      _showMessage(
-        'Failed to load announcements: $error',
-        isError: true,
-      );
+      _showMessage('Failed to load announcements: $error', isError: true);
     }
   }
 
-  void _showMessage(
-      String message, {
-        bool isError = false,
-      }) {
+  void _showMessage(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -80,11 +72,9 @@ class _ManageAnnouncementsPageState
     );
 
     String selectedType =
-        announcement?['announcement_type']?.toString() ??
-            'General';
+        announcement?['announcement_type']?.toString() ?? 'General';
 
-    bool isActive =
-        announcement?['is_active'] as bool? ?? true;
+    bool isActive = announcement?['is_active'] as bool? ?? true;
 
     bool isSaving = false;
 
@@ -100,14 +90,10 @@ class _ManageAnnouncementsPageState
                 return;
               }
 
-              final currentUser =
-                  _supabase.auth.currentUser;
+              final currentUser = _supabase.auth.currentUser;
 
               if (currentUser == null) {
-                _showMessage(
-                  'Admin is not signed in',
-                  isError: true,
-                );
+                _showMessage('Admin is not signed in', isError: true);
                 return;
               }
 
@@ -127,9 +113,7 @@ class _ManageAnnouncementsPageState
 
               try {
                 if (announcement == null) {
-                  await _supabase
-                      .from('announcements')
-                      .insert({
+                  await _supabase.from('announcements').insert({
                     ...data,
                     'created_by': currentUser.id,
                   });
@@ -167,8 +151,7 @@ class _ManageAnnouncementsPageState
                   child: Form(
                     key: formKey,
                     child: Column(
-                      crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           announcement == null
@@ -186,8 +169,7 @@ class _ManageAnnouncementsPageState
                           decoration: const InputDecoration(
                             labelText: 'Announcement type',
                             border: OutlineInputBorder(),
-                            prefixIcon:
-                            Icon(Icons.warning_amber),
+                            prefixIcon: Icon(Icons.warning_amber),
                           ),
                           items: const [
                             DropdownMenuItem(
@@ -206,12 +188,12 @@ class _ManageAnnouncementsPageState
                           onChanged: isSaving
                               ? null
                               : (value) {
-                            if (value != null) {
-                              setSheetState(() {
-                                selectedType = value;
-                              });
-                            }
-                          },
+                                  if (value != null) {
+                                    setSheetState(() {
+                                      selectedType = value;
+                                    });
+                                  }
+                                },
                         ),
 
                         const SizedBox(height: 14),
@@ -250,8 +232,7 @@ class _ManageAnnouncementsPageState
                             labelText: 'Area (optional)',
                             hintText: 'Example: Setapak',
                             border: OutlineInputBorder(),
-                            prefixIcon:
-                            Icon(Icons.location_on_outlined),
+                            prefixIcon: Icon(Icons.location_on_outlined),
                           ),
                         ),
 
@@ -267,12 +248,10 @@ class _ManageAnnouncementsPageState
                             labelText: 'Message',
                             alignLabelWithHint: true,
                             border: OutlineInputBorder(),
-                            prefixIcon:
-                            Icon(Icons.message_outlined),
+                            prefixIcon: Icon(Icons.message_outlined),
                           ),
                           validator: (value) {
-                            final message =
-                                value?.trim() ?? '';
+                            final message = value?.trim() ?? '';
 
                             if (message.isEmpty) {
                               return 'Please enter a message';
@@ -288,24 +267,21 @@ class _ManageAnnouncementsPageState
 
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: const Text(
-                            'Active announcement',
-                          ),
+                          title: const Text('Active announcement'),
                           subtitle: Text(
                             isActive
                                 ? 'Users can view this announcement'
                                 : 'Hidden from normal users',
                           ),
                           value: isActive,
-                          activeThumbColor:
-                          const Color(0xFF3730A3),
+                          activeThumbColor: const Color(0xFF3730A3),
                           onChanged: isSaving
                               ? null
                               : (value) {
-                            setSheetState(() {
-                              isActive = value;
-                            });
-                          },
+                                  setSheetState(() {
+                                    isActive = value;
+                                  });
+                                },
                         ),
 
                         const SizedBox(height: 14),
@@ -313,31 +289,24 @@ class _ManageAnnouncementsPageState
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
-                            onPressed:
-                            isSaving ? null : saveAnnouncement,
+                            onPressed: isSaving ? null : saveAnnouncement,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                              const Color(0xFF3730A3),
+                              backgroundColor: const Color(0xFF3730A3),
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 14,
-                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
                             icon: isSaving
                                 ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child:
-                              CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
                                 : const Icon(Icons.save_outlined),
                             label: Text(
-                              isSaving
-                                  ? 'Saving...'
-                                  : 'Save Announcement',
+                              isSaving ? 'Saving...' : 'Save Announcement',
                             ),
                           ),
                         ),
@@ -358,55 +327,39 @@ class _ManageAnnouncementsPageState
 
     if (saved == true) {
       _showMessage(
-        announcement == null
-            ? 'Announcement created'
-            : 'Announcement updated',
+        announcement == null ? 'Announcement created' : 'Announcement updated',
       );
 
       await _loadAnnouncements();
     }
   }
 
-  Future<void> _toggleActive(
-      Map<String, dynamic> announcement,
-      ) async {
-    final currentStatus =
-        announcement['is_active'] as bool? ?? false;
+  Future<void> _toggleActive(Map<String, dynamic> announcement) async {
+    final currentStatus = announcement['is_active'] as bool? ?? false;
 
     try {
       await _supabase
           .from('announcements')
-          .update({
-        'is_active': !currentStatus,
-      })
+          .update({'is_active': !currentStatus})
           .eq('id', announcement['id']);
 
       _showMessage(
-        currentStatus
-            ? 'Announcement deactivated'
-            : 'Announcement activated',
+        currentStatus ? 'Announcement deactivated' : 'Announcement activated',
       );
 
       await _loadAnnouncements();
     } catch (error) {
-      _showMessage(
-        'Unable to update announcement: $error',
-        isError: true,
-      );
+      _showMessage('Unable to update announcement: $error', isError: true);
     }
   }
 
-  Future<void> _confirmDelete(
-      Map<String, dynamic> announcement,
-      ) async {
+  Future<void> _confirmDelete(Map<String, dynamic> announcement) async {
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Delete Announcement'),
-          content: Text(
-            'Delete "${announcement['title']}" permanently?',
-          ),
+          content: Text('Delete "${announcement['title']}" permanently?'),
           actions: [
             TextButton(
               onPressed: () {
@@ -440,10 +393,7 @@ class _ManageAnnouncementsPageState
       _showMessage('Announcement deleted');
       await _loadAnnouncements();
     } catch (error) {
-      _showMessage(
-        'Unable to delete announcement: $error',
-        isError: true,
-      );
+      _showMessage('Unable to delete announcement: $error', isError: true);
     }
   }
 
@@ -459,15 +409,10 @@ class _ManageAnnouncementsPageState
     return const Color(0xFF3730A3);
   }
 
-  Widget _buildAnnouncementCard(
-      Map<String, dynamic> announcement,
-      ) {
-    final type =
-        announcement['announcement_type']?.toString() ??
-            'General';
+  Widget _buildAnnouncementCard(Map<String, dynamic> announcement) {
+    final type = announcement['announcement_type']?.toString() ?? 'General';
 
-    final isActive =
-        announcement['is_active'] as bool? ?? false;
+    final isActive = announcement['is_active'] as bool? ?? false;
 
     final typeColor = _getTypeColor(type);
 
@@ -476,9 +421,7 @@ class _ManageAnnouncementsPageState
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15),
-        side: const BorderSide(
-          color: Color(0xFFE2E2E8),
-        ),
+        side: const BorderSide(color: Color(0xFFE2E2E8)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(15),
@@ -520,9 +463,7 @@ class _ManageAnnouncementsPageState
                   child: Text(
                     isActive ? 'Active' : 'Inactive',
                     style: TextStyle(
-                      color: isActive
-                          ? Colors.green
-                          : Colors.grey.shade700,
+                      color: isActive ? Colors.green : Colors.grey.shade700,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),
@@ -535,17 +476,11 @@ class _ManageAnnouncementsPageState
 
             Text(
               announcement['title']?.toString() ?? '',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
 
             if (announcement['area'] != null &&
-                announcement['area']
-                    .toString()
-                    .trim()
-                    .isNotEmpty) ...[
+                announcement['area'].toString().trim().isNotEmpty) ...[
               const SizedBox(height: 7),
               Row(
                 children: [
@@ -558,10 +493,7 @@ class _ManageAnnouncementsPageState
                   Expanded(
                     child: Text(
                       announcement['area'].toString(),
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontSize: 12,
-                      ),
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                   ),
                 ],
@@ -572,10 +504,7 @@ class _ManageAnnouncementsPageState
 
             Text(
               announcement['message']?.toString() ?? '',
-              style: const TextStyle(
-                fontSize: 13,
-                height: 1.4,
-              ),
+              style: const TextStyle(fontSize: 13, height: 1.4),
             ),
 
             const Divider(height: 25),
@@ -584,9 +513,7 @@ class _ManageAnnouncementsPageState
               children: [
                 TextButton.icon(
                   onPressed: () {
-                    _openAnnouncementForm(
-                      announcement: announcement,
-                    );
+                    _openAnnouncementForm(announcement: announcement);
                   },
                   icon: const Icon(Icons.edit_outlined),
                   label: const Text('Edit'),
@@ -600,9 +527,7 @@ class _ManageAnnouncementsPageState
                         ? Icons.visibility_off_outlined
                         : Icons.visibility_outlined,
                   ),
-                  label: Text(
-                    isActive ? 'Deactivate' : 'Activate',
-                  ),
+                  label: Text(isActive ? 'Deactivate' : 'Activate'),
                 ),
                 const Spacer(),
                 IconButton(
@@ -610,10 +535,7 @@ class _ManageAnnouncementsPageState
                   onPressed: () {
                     _confirmDelete(announcement);
                   },
-                  icon: const Icon(
-                    Icons.delete_outline,
-                    color: Colors.red,
-                  ),
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
                 ),
               ],
             ),
@@ -642,50 +564,34 @@ class _ManageAnnouncementsPageState
         label: const Text('New Announcement'),
       ),
       body: _isLoading
-          ? const Center(
-        child: CircularProgressIndicator(),
-      )
+          ? const Center(child: CircularProgressIndicator())
           : _announcements.isEmpty
           ? RefreshIndicator(
-        onRefresh: _loadAnnouncements,
-        child: ListView(
-          children: const [
-            SizedBox(height: 170),
-            Icon(
-              Icons.campaign_outlined,
-              size: 70,
-              color: Colors.grey,
-            ),
-            SizedBox(height: 12),
-            Center(
-              child: Text(
-                'No announcements yet',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 16,
-                ),
+              onRefresh: _loadAnnouncements,
+              child: ListView(
+                children: const [
+                  SizedBox(height: 170),
+                  Icon(Icons.campaign_outlined, size: 70, color: Colors.grey),
+                  SizedBox(height: 12),
+                  Center(
+                    child: Text(
+                      'No announcements yet',
+                      style: TextStyle(color: Colors.grey, fontSize: 16),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _loadAnnouncements,
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
+                itemCount: _announcements.length,
+                itemBuilder: (context, index) {
+                  return _buildAnnouncementCard(_announcements[index]);
+                },
               ),
             ),
-          ],
-        ),
-      )
-          : RefreshIndicator(
-        onRefresh: _loadAnnouncements,
-        child: ListView.builder(
-          padding: const EdgeInsets.fromLTRB(
-            16,
-            16,
-            16,
-            90,
-          ),
-          itemCount: _announcements.length,
-          itemBuilder: (context, index) {
-            return _buildAnnouncementCard(
-              _announcements[index],
-            );
-          },
-        ),
-      ),
     );
   }
 }

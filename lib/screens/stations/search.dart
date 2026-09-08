@@ -78,7 +78,7 @@ class _SearchPageState extends State<SearchPage> {
     _searchController.addListener(_onSearchChanged);
     _autoRefreshTimer = Timer.periodic(
       _autoRefreshInterval,
-          (_) => _loadStations(silent: true),
+      (_) => _loadStations(silent: true),
     );
   }
 
@@ -155,7 +155,8 @@ class _SearchPageState extends State<SearchPage> {
     final dLat = _degToRad(station.latitude! - widget.userLat!);
     final dLng = _degToRad(station.longitude! - widget.userLng!);
 
-    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+    final a =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
         math.cos(lat1) *
             math.cos(lat2) *
             math.sin(dLng / 2) *
@@ -192,13 +193,15 @@ class _SearchPageState extends State<SearchPage> {
     final query = _query.toLowerCase();
 
     var result = _allStations.where((station) {
-      final matchesQuery = query.isEmpty ||
+      final matchesQuery =
+          query.isEmpty ||
           station.name.toLowerCase().contains(query) ||
           station.river.toLowerCase().contains(query) ||
           station.district.toLowerCase().contains(query) ||
           station.state.toLowerCase().contains(query);
 
-      final matchesFilter = _selectedFilter == StationFilter.all ||
+      final matchesFilter =
+          _selectedFilter == StationFilter.all ||
           _statusMatches(station.status, _selectedFilter);
 
       return matchesQuery && matchesFilter;
@@ -224,8 +227,7 @@ class _SearchPageState extends State<SearchPage> {
       case StationFilter.danger:
         return normalized.contains('danger') || normalized.contains('bahaya');
       case StationFilter.warning:
-        return normalized.contains('warning') ||
-            normalized.contains('waspada');
+        return normalized.contains('warning') || normalized.contains('waspada');
       case StationFilter.alert:
         return normalized.contains('alert') || normalized.contains('amaran');
       case StationFilter.normal:
@@ -436,10 +438,7 @@ class _SearchPageState extends State<SearchPage> {
         child: Container(
           width: 10,
           height: 10,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
       ),
       title: Text(
@@ -476,9 +475,7 @@ class _SearchPageState extends State<SearchPage> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => StationDetailsPage(
-              station: station,
-            ),
+            builder: (context) => StationDetailsPage(station: station),
           ),
         );
       },

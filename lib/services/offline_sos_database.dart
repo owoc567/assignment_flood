@@ -4,8 +4,7 @@ import 'package:sqflite/sqflite.dart';
 class OfflineSosDatabase {
   OfflineSosDatabase._internal();
 
-  static final OfflineSosDatabase instance =
-  OfflineSosDatabase._internal();
+  static final OfflineSosDatabase instance = OfflineSosDatabase._internal();
 
   static Database? _database;
 
@@ -21,17 +20,13 @@ class OfflineSosDatabase {
   Future<Database> _createDatabase() async {
     final databasePath = await getDatabasesPath();
 
-    final path = join(
-      databasePath,
-      'myflood_offline.db',
-    );
+    final path = join(databasePath, 'myflood_offline.db');
 
     return openDatabase(
       path,
       version: 1,
       onCreate: (database, version) async {
-        await database.execute(
-          '''
+        await database.execute('''
           CREATE TABLE offline_sos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id TEXT NOT NULL,
@@ -43,8 +38,7 @@ class OfflineSosDatabase {
             created_at TEXT NOT NULL,
             sync_status TEXT NOT NULL DEFAULT 'pending_sync'
           )
-          ''',
-        );
+          ''');
       },
     );
   }
@@ -59,25 +53,19 @@ class OfflineSosDatabase {
   }) async {
     final database = await instance.database;
 
-    return database.insert(
-      'offline_sos',
-      {
-        'user_id': userId,
-        'full_name': fullName,
-        'phone_number': phoneNumber,
-        'latitude': latitude,
-        'longitude': longitude,
-        'message': message,
-        'created_at':
-        DateTime.now().toUtc().toIso8601String(),
-        'sync_status': 'pending_sync',
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    return database.insert('offline_sos', {
+      'user_id': userId,
+      'full_name': fullName,
+      'phone_number': phoneNumber,
+      'latitude': latitude,
+      'longitude': longitude,
+      'message': message,
+      'created_at': DateTime.now().toUtc().toIso8601String(),
+      'sync_status': 'pending_sync',
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  Future<List<Map<String, dynamic>>>
-  getPendingSos() async {
+  Future<List<Map<String, dynamic>>> getPendingSos() async {
     final database = await instance.database;
 
     return database.query(
@@ -88,14 +76,10 @@ class OfflineSosDatabase {
     );
   }
 
-  Future<List<Map<String, dynamic>>>
-  getAllOfflineSos() async {
+  Future<List<Map<String, dynamic>>> getAllOfflineSos() async {
     final database = await instance.database;
 
-    return database.query(
-      'offline_sos',
-      orderBy: 'created_at DESC',
-    );
+    return database.query('offline_sos', orderBy: 'created_at DESC');
   }
 
   Future<void> markAsSynced(int id) async {
@@ -103,9 +87,7 @@ class OfflineSosDatabase {
 
     await database.update(
       'offline_sos',
-      {
-        'sync_status': 'synced',
-      },
+      {'sync_status': 'synced'},
       where: 'id = ?',
       whereArgs: [id],
     );
@@ -116,9 +98,7 @@ class OfflineSosDatabase {
 
     await database.update(
       'offline_sos',
-      {
-        'sync_status': 'pending_sync',
-      },
+      {'sync_status': 'pending_sync'},
       where: 'id = ?',
       whereArgs: [id],
     );
@@ -127,10 +107,6 @@ class OfflineSosDatabase {
   Future<void> deleteSos(int id) async {
     final database = await instance.database;
 
-    await database.delete(
-      'offline_sos',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await database.delete('offline_sos', where: 'id = ?', whereArgs: [id]);
   }
 }

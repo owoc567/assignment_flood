@@ -31,8 +31,7 @@ class _CommunityPageState extends State<CommunityPage> {
   final Set<dynamic> _expandedCommentPosts = {};
   final Set<dynamic> _loadingCommentPosts = {};
 
-  final Map<dynamic, List<Map<String, dynamic>>>
-  _inlineComments = {};
+  final Map<dynamic, List<Map<String, dynamic>>> _inlineComments = {};
   String _selectedFilter = 'All';
   bool _isLoading = true;
 
@@ -92,29 +91,24 @@ class _CommunityPageState extends State<CommunityPage> {
             .select('post_id, user_id, reaction_type')
             .inFilter('post_id', postIds);
 
-        final reactions =
-        List<Map<String, dynamic>>.from(reactionResponse);
+        final reactions = List<Map<String, dynamic>>.from(reactionResponse);
 
         final currentUserId = _supabase.auth.currentUser?.id;
 
         for (final reaction in reactions) {
           final postId = reaction['post_id'];
           final userId = reaction['user_id']?.toString();
-          final reactionType =
-          reaction['reaction_type']?.toString();
+          final reactionType = reaction['reaction_type']?.toString();
 
           if (reactionType == 'like') {
-            _likeCounts[postId] =
-                (_likeCounts[postId] ?? 0) + 1;
+            _likeCounts[postId] = (_likeCounts[postId] ?? 0) + 1;
           }
 
           if (reactionType == 'dislike') {
-            _dislikeCounts[postId] =
-                (_dislikeCounts[postId] ?? 0) + 1;
+            _dislikeCounts[postId] = (_dislikeCounts[postId] ?? 0) + 1;
           }
 
-          if (userId == currentUserId &&
-              reactionType != null) {
+          if (userId == currentUserId && reactionType != null) {
             _myReactions[postId] = reactionType;
           }
         }
@@ -126,8 +120,9 @@ class _CommunityPageState extends State<CommunityPage> {
             .select('post_id')
             .inFilter('post_id', postIds);
 
-        final allComments =
-        List<Map<String, dynamic>>.from(commentCountResponse);
+        final allComments = List<Map<String, dynamic>>.from(
+          commentCountResponse,
+        );
 
         for (final comment in allComments) {
           final postId = comment['post_id'];
@@ -141,8 +136,7 @@ class _CommunityPageState extends State<CommunityPage> {
             .select('id, full_name, profile_image_url')
             .inFilter('id', userIds);
 
-        final profiles =
-        List<Map<String, dynamic>>.from(profileResponse);
+        final profiles = List<Map<String, dynamic>>.from(profileResponse);
 
         for (final profile in profiles) {
           final profileId = profile['id']?.toString();
@@ -196,10 +190,7 @@ class _CommunityPageState extends State<CommunityPage> {
               ),
               title: const Row(
                 children: [
-                  Icon(
-                    Icons.edit_outlined,
-                    color: Color(0xFF3730A3),
-                  ),
+                  Icon(Icons.edit_outlined, color: Color(0xFF3730A3)),
                   SizedBox(width: 10),
                   Text('Create Post'),
                 ],
@@ -216,8 +207,7 @@ class _CommunityPageState extends State<CommunityPage> {
                           initialValue: selectedType,
                           decoration: InputDecoration(
                             labelText: 'Post Type',
-                            prefixIcon:
-                            const Icon(Icons.category_outlined),
+                            prefixIcon: const Icon(Icons.category_outlined),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -239,12 +229,12 @@ class _CommunityPageState extends State<CommunityPage> {
                           onChanged: isSubmitting
                               ? null
                               : (value) {
-                            if (value != null) {
-                              setDialogState(() {
-                                selectedType = value;
-                              });
-                            }
-                          },
+                                  if (value != null) {
+                                    setDialogState(() {
+                                      selectedType = value;
+                                    });
+                                  }
+                                },
                         ),
                         const SizedBox(height: 14),
                         TextFormField(
@@ -259,8 +249,7 @@ class _CommunityPageState extends State<CommunityPage> {
                             ),
                           ),
                           validator: (value) {
-                            if (value == null ||
-                                value.trim().isEmpty) {
+                            if (value == null || value.trim().isEmpty) {
                               return 'Please enter a title';
                             }
 
@@ -278,8 +267,7 @@ class _CommunityPageState extends State<CommunityPage> {
                           decoration: InputDecoration(
                             labelText: 'Location (optional)',
                             hintText: 'Example: Setapak, Kuala Lumpur',
-                            prefixIcon:
-                            const Icon(Icons.location_on_outlined),
+                            prefixIcon: const Icon(Icons.location_on_outlined),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -299,8 +287,7 @@ class _CommunityPageState extends State<CommunityPage> {
                             ),
                           ),
                           validator: (value) {
-                            if (value == null ||
-                                value.trim().isEmpty) {
+                            if (value == null || value.trim().isEmpty) {
                               return 'Please enter a description';
                             }
 
@@ -321,8 +308,8 @@ class _CommunityPageState extends State<CommunityPage> {
                   onPressed: isSubmitting
                       ? null
                       : () {
-                    Navigator.pop(dialogContext);
-                  },
+                          Navigator.pop(dialogContext);
+                        },
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
@@ -333,41 +320,40 @@ class _CommunityPageState extends State<CommunityPage> {
                   onPressed: isSubmitting
                       ? null
                       : () async {
-                    if (!formKey.currentState!.validate()) {
-                      return;
-                    }
+                          if (!formKey.currentState!.validate()) {
+                            return;
+                          }
 
-                    setDialogState(() {
-                      isSubmitting = true;
-                    });
+                          setDialogState(() {
+                            isSubmitting = true;
+                          });
 
-                    final success = await _createPost(
-                      title: titleController.text.trim(),
-                      location:
-                      locationController.text.trim(),
-                      content: contentController.text.trim(),
-                      postType: selectedType,
-                    );
+                          final success = await _createPost(
+                            title: titleController.text.trim(),
+                            location: locationController.text.trim(),
+                            content: contentController.text.trim(),
+                            postType: selectedType,
+                          );
 
-                    if (!dialogContext.mounted) return;
+                          if (!dialogContext.mounted) return;
 
-                    if (success) {
-                      Navigator.pop(dialogContext);
-                    } else {
-                      setDialogState(() {
-                        isSubmitting = false;
-                      });
-                    }
-                  },
+                          if (success) {
+                            Navigator.pop(dialogContext);
+                          } else {
+                            setDialogState(() {
+                              isSubmitting = false;
+                            });
+                          }
+                        },
                   child: isSubmitting
                       ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
                       : const Text('Publish'),
                 ),
               ],
@@ -376,10 +362,6 @@ class _CommunityPageState extends State<CommunityPage> {
         );
       },
     );
-
-    titleController.dispose();
-    locationController.dispose();
-    contentController.dispose();
   }
 
   Future<bool> _createPost({
@@ -444,9 +426,7 @@ class _CommunityPageState extends State<CommunityPage> {
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Delete Post'),
-          content: const Text(
-            'Are you sure you want to delete this post?',
-          ),
+          content: const Text('Are you sure you want to delete this post?'),
           actions: [
             TextButton(
               onPressed: () {
@@ -476,10 +456,7 @@ class _CommunityPageState extends State<CommunityPage> {
 
   Future<void> _deletePost(dynamic postId) async {
     try {
-      await _supabase
-          .from('community_posts')
-          .delete()
-          .eq('id', postId);
+      await _supabase.from('community_posts').delete().eq('id', postId);
 
       if (!mounted) return;
 
@@ -503,10 +480,7 @@ class _CommunityPageState extends State<CommunityPage> {
     }
   }
 
-  Future<void> _changeReaction(
-      dynamic postId,
-      String selectedReaction,
-      ) async {
+  Future<void> _changeReaction(dynamic postId, String selectedReaction) async {
     final user = _supabase.auth.currentUser;
 
     if (user == null) {
@@ -546,9 +520,7 @@ class _CommunityPageState extends State<CommunityPage> {
         // Change Like to Dislike or Dislike to Like.
         await _supabase
             .from('community_reactions')
-            .update({
-          'reaction_type': selectedReaction,
-        })
+            .update({'reaction_type': selectedReaction})
             .eq('post_id', postId)
             .eq('user_id', user.id);
       }
@@ -608,8 +580,7 @@ class _CommunityPageState extends State<CommunityPage> {
           .eq('post_id', postId)
           .order('created_at', ascending: true);
 
-      final comments =
-      List<Map<String, dynamic>>.from(response);
+      final comments = List<Map<String, dynamic>>.from(response);
 
       final commentUserIds = comments
           .map((comment) => comment['user_id']?.toString())
@@ -623,8 +594,7 @@ class _CommunityPageState extends State<CommunityPage> {
             .select('id, full_name, profile_image_url')
             .inFilter('id', commentUserIds);
 
-        final profiles =
-        List<Map<String, dynamic>>.from(profileResponse);
+        final profiles = List<Map<String, dynamic>>.from(profileResponse);
 
         for (final profile in profiles) {
           final profileId = profile['id']?.toString();
@@ -765,15 +735,12 @@ class _CommunityPageState extends State<CommunityPage> {
     final userId = post['user_id']?.toString() ?? '';
     final profile = _profiles[userId];
 
-    final fullName =
-        profile?['full_name']?.toString().trim() ?? '';
+    final fullName = profile?['full_name']?.toString().trim() ?? '';
 
-    final authorName =
-    fullName.isEmpty ? 'Community User' : fullName;
+    final authorName = fullName.isEmpty ? 'Community User' : fullName;
 
     final imageUrl = profile?['profile_image_url']?.toString();
-    final postType =
-        post['post_type']?.toString() ?? 'Flood Report';
+    final postType = post['post_type']?.toString() ?? 'Flood Report';
     final location = post['location']?.toString().trim() ?? '';
     final title = post['title']?.toString() ?? '';
     final content = post['content']?.toString() ?? '';
@@ -790,9 +757,7 @@ class _CommunityPageState extends State<CommunityPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(17),
-        border: Border.all(
-          color: const Color(0xFFE1E1E8),
-        ),
+        border: Border.all(color: const Color(0xFFE1E1E8)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -802,21 +767,16 @@ class _CommunityPageState extends State<CommunityPage> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildProfileAvatar(
-                  name: authorName,
-                  imageUrl: imageUrl,
-                ),
+                _buildProfileAvatar(name: authorName, imageUrl: imageUrl),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Wrap(
                         spacing: 7,
                         runSpacing: 5,
-                        crossAxisAlignment:
-                        WrapCrossAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Text(
                             authorName,
@@ -832,8 +792,7 @@ class _CommunityPageState extends State<CommunityPage> {
                             ),
                             decoration: BoxDecoration(
                               color: typeBackground,
-                              borderRadius:
-                              BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
                               postType,
@@ -874,9 +833,7 @@ class _CommunityPageState extends State<CommunityPage> {
                             ),
                             const Text(
                               ' · ',
-                              style: TextStyle(
-                                color: Colors.grey,
-                              ),
+                              style: TextStyle(color: Colors.grey),
                             ),
                           ],
                           Text(
@@ -905,10 +862,7 @@ class _CommunityPageState extends State<CommunityPage> {
                           value: 'delete',
                           child: Row(
                             children: [
-                              Icon(
-                                Icons.delete_outline,
-                                color: Colors.red,
-                              ),
+                              Icon(Icons.delete_outline, color: Colors.red),
                               SizedBox(width: 8),
                               Text('Delete'),
                             ],
@@ -943,7 +897,7 @@ class _CommunityPageState extends State<CommunityPage> {
                     color: Color(0xFF252532),
                   ),
                 ),
-                if (postType == 'Flood Report' && !isVerified)  ...[
+                if (postType == 'Flood Report' && !isVerified) ...[
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -957,11 +911,7 @@ class _CommunityPageState extends State<CommunityPage> {
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.schedule,
-                          size: 14,
-                          color: Colors.orange,
-                        ),
+                        Icon(Icons.schedule, size: 14, color: Colors.orange),
                         SizedBox(width: 5),
                         Text(
                           'Waiting for admin verification',
@@ -978,23 +928,14 @@ class _CommunityPageState extends State<CommunityPage> {
               ],
             ),
           ),
-          _buildReactionBar(
-            post['id'],
-            title,
-          ),
-          _buildInlineComments(
-            post['id'],
-            title,
-          ),
+          _buildReactionBar(post['id'], title),
+          _buildInlineComments(post['id'], title),
         ],
       ),
     );
   }
 
-  Widget _buildReactionBar(
-      dynamic postId,
-      String postTitle,
-      ) {
+  Widget _buildReactionBar(dynamic postId, String postTitle) {
     final likeCount = _likeCounts[postId] ?? 0;
     final dislikeCount = _dislikeCounts[postId] ?? 0;
     final myReaction = _myReactions[postId];
@@ -1006,16 +947,9 @@ class _CommunityPageState extends State<CommunityPage> {
 
     return Container(
       decoration: const BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            color: Color(0xFFE8E8EE),
-          ),
-        ),
+        border: Border(top: BorderSide(color: Color(0xFFE8E8EE))),
       ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 6,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       child: Row(
         children: [
           TextButton.icon(
@@ -1031,9 +965,7 @@ class _CommunityPageState extends State<CommunityPage> {
                   : Colors.transparent,
             ),
             icon: Icon(
-              hasLiked
-                  ? Icons.thumb_up
-                  : Icons.thumb_up_outlined,
+              hasLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
               size: 18,
             ),
             label: Text('$likeCount'),
@@ -1044,17 +976,13 @@ class _CommunityPageState extends State<CommunityPage> {
               _changeReaction(postId, 'dislike');
             },
             style: TextButton.styleFrom(
-              foregroundColor: hasDisliked
-                  ? Colors.red
-                  : Colors.grey.shade600,
+              foregroundColor: hasDisliked ? Colors.red : Colors.grey.shade600,
               backgroundColor: hasDisliked
                   ? const Color(0xFFFFE8E8)
                   : Colors.transparent,
             ),
             icon: Icon(
-              hasDisliked
-                  ? Icons.thumb_down
-                  : Icons.thumb_down_outlined,
+              hasDisliked ? Icons.thumb_down : Icons.thumb_down_outlined,
               size: 18,
             ),
             label: Text('$dislikeCount'),
@@ -1063,27 +991,22 @@ class _CommunityPageState extends State<CommunityPage> {
           TextButton.icon(
             onPressed: replyCount == 0
                 ? () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => CommunityCommentsPage(
-                    postId: postId,
-                    postTitle: postTitle,
-                  ),
-                ),
-              );
-              await _loadPosts();
-            }
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CommunityCommentsPage(
+                          postId: postId,
+                          postTitle: postTitle,
+                        ),
+                      ),
+                    );
+                    await _loadPosts();
+                  }
                 : () {
-              _toggleComments(postId);
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.grey.shade600,
-            ),
-            icon: const Icon(
-              Icons.chat_bubble_outline,
-              size: 18,
-            ),
+                    _toggleComments(postId);
+                  },
+            style: TextButton.styleFrom(foregroundColor: Colors.grey.shade600),
+            icon: const Icon(Icons.chat_bubble_outline, size: 18),
             label: Text(
               repliesExpanded
                   ? 'Hide replies'
@@ -1097,10 +1020,7 @@ class _CommunityPageState extends State<CommunityPage> {
     );
   }
 
-  Widget _buildSmallAvatar({
-    required String name,
-    required String? imageUrl,
-  }) {
+  Widget _buildSmallAvatar({required String name, required String? imageUrl}) {
     if (imageUrl != null && imageUrl.trim().isNotEmpty) {
       return CircleAvatar(
         radius: 15,
@@ -1124,19 +1044,14 @@ class _CommunityPageState extends State<CommunityPage> {
     );
   }
 
-  Widget _buildInlineComments(
-      dynamic postId,
-      String postTitle,
-      ) {
+  Widget _buildInlineComments(dynamic postId, String postTitle) {
     if (!_expandedCommentPosts.contains(postId)) {
       return const SizedBox.shrink();
     }
 
-    final isLoading =
-    _loadingCommentPosts.contains(postId);
+    final isLoading = _loadingCommentPosts.contains(postId);
 
-    final comments =
-        _inlineComments[postId] ?? [];
+    final comments = _inlineComments[postId] ?? [];
     final visibleCount = _visibleReplyCounts[postId] ?? 3;
     final visibleComments = comments.take(visibleCount).toList();
     final remainingCount = comments.length - visibleComments.length;
@@ -1146,11 +1061,7 @@ class _CommunityPageState extends State<CommunityPage> {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
       decoration: const BoxDecoration(
         color: Color(0xFFFAFAFC),
-        border: Border(
-          top: BorderSide(
-            color: Color(0xFFE8E8EE),
-          ),
-        ),
+        border: Border(top: BorderSide(color: Color(0xFFE8E8EE))),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1171,52 +1082,40 @@ class _CommunityPageState extends State<CommunityPage> {
               child: Center(
                 child: Text(
                   'No comments yet',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.grey, fontSize: 12),
                 ),
               ),
             )
           else
             ...visibleComments.map((comment) {
-              final userId =
-                  comment['user_id']?.toString() ?? '';
+              final userId = comment['user_id']?.toString() ?? '';
 
               final profile = _profiles[userId];
 
-              final savedName =
-                  profile?['full_name']?.toString().trim() ?? '';
+              final savedName = profile?['full_name']?.toString().trim() ?? '';
 
               final authorName = savedName.isEmpty
                   ? 'Community User'
                   : savedName;
 
-              final imageUrl =
-              profile?['profile_image_url']?.toString();
+              final imageUrl = profile?['profile_image_url']?.toString();
 
               return Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Row(
-                  crossAxisAlignment:
-                  CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSmallAvatar(
-                      name: authorName,
-                      imageUrl: imageUrl,
-                    ),
+                    _buildSmallAvatar(name: authorName, imageUrl: imageUrl),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF0F0F5),
-                          borderRadius:
-                          BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
-                          crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               children: [
@@ -1225,15 +1124,12 @@ class _CommunityPageState extends State<CommunityPage> {
                                     authorName,
                                     style: const TextStyle(
                                       fontSize: 11,
-                                      fontWeight:
-                                      FontWeight.bold,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ),
                                 Text(
-                                  _timeAgo(
-                                    comment['created_at'],
-                                  ),
+                                  _timeAgo(comment['created_at']),
                                   style: const TextStyle(
                                     color: Colors.grey,
                                     fontSize: 9,
@@ -1243,13 +1139,8 @@ class _CommunityPageState extends State<CommunityPage> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              comment['comment_text']
-                                  ?.toString() ??
-                                  '',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                height: 1.3,
-                              ),
+                              comment['comment_text']?.toString() ?? '',
+                              style: const TextStyle(fontSize: 12, height: 1.3),
                             ),
                           ],
                         ),
@@ -1289,10 +1180,7 @@ class _CommunityPageState extends State<CommunityPage> {
               ),
               child: const Text(
                 'Hide replies',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
               ),
             ),
 
@@ -1303,11 +1191,10 @@ class _CommunityPageState extends State<CommunityPage> {
                 await Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) =>
-                        CommunityCommentsPage(
-                          postId: postId,
-                          postTitle: postTitle,
-                        ),
+                    builder: (context) => CommunityCommentsPage(
+                      postId: postId,
+                      postTitle: postTitle,
+                    ),
                   ),
                 );
 
@@ -1316,10 +1203,7 @@ class _CommunityPageState extends State<CommunityPage> {
                 await _loadPosts();
                 await _loadInlineComments(postId);
               },
-              icon: const Icon(
-                Icons.edit_outlined,
-                size: 17,
-              ),
+              icon: const Icon(Icons.edit_outlined, size: 17),
               label: const Text('Write a Reply'),
             ),
           ),
@@ -1348,17 +1232,12 @@ class _CommunityPageState extends State<CommunityPage> {
         selectedColor: const Color(0xFFEDEBFF),
         backgroundColor: Colors.white,
         side: BorderSide(
-          color: isSelected
-              ? const Color(0xFF3730A3)
-              : const Color(0xFFE1E1E8),
+          color: isSelected ? const Color(0xFF3730A3) : const Color(0xFFE1E1E8),
         ),
         labelStyle: TextStyle(
-          color: isSelected
-              ? const Color(0xFF3730A3)
-              : const Color(0xFF555563),
+          color: isSelected ? const Color(0xFF3730A3) : const Color(0xFF555563),
           fontSize: 12,
-          fontWeight:
-          isSelected ? FontWeight.bold : FontWeight.normal,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
         onSelected: (_) {
           setState(() {
@@ -1372,9 +1251,7 @@ class _CommunityPageState extends State<CommunityPage> {
   Widget _buildBody() {
     if (_isLoading) {
       return const Center(
-        child: CircularProgressIndicator(
-          color: Color(0xFF3730A3),
-        ),
+        child: CircularProgressIndicator(color: Color(0xFF3730A3)),
       );
     }
 
@@ -1399,10 +1276,7 @@ class _CommunityPageState extends State<CommunityPage> {
           const SizedBox(height: 14),
           Text(
             '${posts.length} post${posts.length == 1 ? '' : 's'} · sorted by latest',
-            style: const TextStyle(
-              color: Colors.grey,
-              fontSize: 12,
-            ),
+            style: const TextStyle(color: Colors.grey, fontSize: 12),
           ),
           const SizedBox(height: 14),
           if (posts.isEmpty)
@@ -1410,18 +1284,11 @@ class _CommunityPageState extends State<CommunityPage> {
               padding: EdgeInsets.only(top: 100),
               child: Column(
                 children: [
-                  Icon(
-                    Icons.forum_outlined,
-                    color: Colors.grey,
-                    size: 65,
-                  ),
+                  Icon(Icons.forum_outlined, color: Colors.grey, size: 65),
                   SizedBox(height: 14),
                   Text(
                     'No community posts found',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 16,
-                    ),
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
                   ),
                 ],
               ),
@@ -1471,10 +1338,7 @@ class _CommunityPageState extends State<CommunityPage> {
                 foregroundColor: Colors.white,
               ),
               onPressed: _showCreatePostDialog,
-              icon: const Icon(
-                Icons.edit_outlined,
-                size: 20,
-              ),
+              icon: const Icon(Icons.edit_outlined, size: 20),
             ),
           ),
         ],

@@ -2,18 +2,16 @@ import 'dart:io';
 
 import 'package:assignment_flood/screens/users/signIn.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
 
 class SignUp extends StatefulWidget {
   const SignUp({super.key});
 
   @override
   State<SignUp> createState() => _SignUpState();
-
-
 }
 //username: minimum 3 characters, letters/numbers/underscore only
 //email: valid email format
@@ -27,6 +25,7 @@ class _SignUpState extends State<SignUp> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _phoneNumberController = TextEditingController();
+  final _addressController = TextEditingController();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -35,10 +34,10 @@ class _SignUpState extends State<SignUp> {
   File? _profileImage;
   final picker = ImagePicker();
 
-  Future getImageFromGallery() async{
+  Future getImageFromGallery() async {
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
-    if(pickedFile != null){
+    if (pickedFile != null) {
       setState(() {
         _profileImage = File(pickedFile.path);
       });
@@ -59,26 +58,25 @@ class _SignUpState extends State<SignUp> {
     } else {
       showDialog(
         context: context,
-        builder: (context) =>
-            AlertDialog(
-              title: const Text('Profile Image'),
-              content: const SingleChildScrollView(
-                child: ListBody(
-                  children: <Widget>[
-                    Text('Profile Image'),
-                    Text('Profile Image file is missing.'),
-                  ],
-                ),
-              ),
-              actions: <Widget>[
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Close'),
-                ),
+        builder: (context) => AlertDialog(
+          title: const Text('Profile Image'),
+          content: const SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text('Profile Image'),
+                Text('Profile Image file is missing.'),
               ],
             ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Close'),
+            ),
+          ],
+        ),
       );
     }
   }
@@ -145,11 +143,13 @@ class _SignUpState extends State<SignUp> {
           final String storagePath =
               '${user.id}/profile_${DateTime.now().millisecondsSinceEpoch}.$extension';
 
-          await supabase.storage.from('profile-images').upload(
-            storagePath,
-            _profileImage!,
-            fileOptions: FileOptions(contentType: contentType),
-          );
+          await supabase.storage
+              .from('profile-images')
+              .upload(
+                storagePath,
+                _profileImage!,
+                fileOptions: FileOptions(contentType: contentType),
+              );
 
           profileImageUrl = supabase.storage
               .from('profile-images')
@@ -166,21 +166,20 @@ class _SignUpState extends State<SignUp> {
       final profileData = <String, dynamic>{
         'full_name': _usernameController.text.trim(),
         'email': _emailController.text.trim().toLowerCase(),
-        'phone_number': _phoneNumberController.text.trim(),
+        'phone_number': _toInternationalPhoneNumber(
+          _phoneNumberController.text,
+        ),
+        'address': _addressController.text.trim(),
       };
 
-    // Only update the image URL when an image was uploaded.
+      // Only update the image URL when an image was uploaded.
       if (profileImageUrl != null) {
-        profileData['profile_image_url'] =
-            profileImageUrl;
+        profileData['profile_image_url'] = profileImageUrl;
       }
 
-    // The database trigger already created the profile.
-    // Therefore, update it instead of inserting another row.
-      await supabase
-          .from('profiles')
-          .update(profileData)
-          .eq('id', user.id);
+      // The database trigger already created the profile.
+      // Therefore, update it instead of inserting another row.
+      await supabase.from('profiles').update(profileData).eq('id', user.id);
 
       // Return to the Sign In page after registration.
       await supabase.auth.signOut();
@@ -192,35 +191,33 @@ class _SignUpState extends State<SignUp> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-              imageUploadError != null
-                  ? 'Image upload failed: $imageUploadError'
-                  : 'Account registered successfully'
+            imageUploadError != null
+                ? 'Image upload failed: $imageUploadError'
+                : 'Account registered successfully',
           ),
         ),
       );
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => const SignIn(),
-        ),
+        MaterialPageRoute(builder: (context) => const SignIn()),
       );
     } on AuthException catch (e) {
       if (!mounted) {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
       if (!mounted) {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Registration failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Registration failed: $e')));
     } finally {
       if (mounted) {
         setState(() {
@@ -234,34 +231,36 @@ class _SignUpState extends State<SignUp> {
   void initState() {
     super.initState();
   }
+
   //purpose:
   @override
-  void dispose(){
+  void dispose() {
     _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _phoneNumberController.dispose();
-    super.dispose();//this for what
+    _addressController.dispose();
+    super.dispose();
   }
 
-  String? _validateUsername(String? value){
-    final username = value?.trim() ?? '';//use for..?
-    if(username.isEmpty){
+  String? _validateUsername(String? value) {
+    final username = value?.trim() ?? ''; //use for..?
+    if (username.isEmpty) {
       return 'Please enter your name';
     }
-    if(username.length < 3){
+    if (username.length < 3) {
       return 'Username must have at least 3 characters';
     }
-    if(!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(username)){
+    if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(username)) {
       return 'Use letters,numbers, and underscore only';
     }
     return null;
   }
 
-  String? _validateEmail(String? value){
-    final email = value?.trim() ?? '';//use for..?
-    if(email.isEmpty){
+  String? _validateEmail(String? value) {
+    final email = value?.trim() ?? ''; //use for..?
+    if (email.isEmpty) {
       return 'Please enter your email';
     }
     if (!RegExp(
@@ -269,6 +268,47 @@ class _SignUpState extends State<SignUp> {
     ).hasMatch(email)) {
       return 'Please enter a valid email address';
     }
+    return null;
+  }
+
+  String? _validatePhoneNumber(String? value) {
+    final phone = value?.replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+
+    if (phone.isEmpty) {
+      return 'Please enter your phone number';
+    }
+
+    final tenDigitMobile = RegExp(r'^01[02-9]\d{7}$');
+    final elevenDigitMobile = RegExp(r'^011\d{8}$');
+
+    if (!tenDigitMobile.hasMatch(phone) && !elevenDigitMobile.hasMatch(phone)) {
+      return 'Enter 01X-XXX XXXX or 011-XXXX XXXX';
+    }
+
+    return null;
+  }
+
+  String _toInternationalPhoneNumber(String value) {
+    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+
+    return '+60${digits.substring(1)}';
+  }
+
+  String? _validateAddress(String? value) {
+    final address = value?.trim() ?? '';
+
+    if (address.isEmpty) {
+      return 'Please enter your address';
+    }
+
+    if (address.length < 5) {
+      return 'Address must have at least 5 characters';
+    }
+
+    if (address.length > 200) {
+      return 'Address cannot exceed 200 characters';
+    }
+
     return null;
   }
 
@@ -316,7 +356,7 @@ class _SignUpState extends State<SignUp> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: (){
+          onPressed: () {
             Navigator.pop(context);
           },
         ),
@@ -327,14 +367,9 @@ class _SignUpState extends State<SignUp> {
         alignment: Alignment.center,
         children: [
           Positioned.fill(
-            child: Image.asset(
-              'assets/images/signIn.png',
-              fit: BoxFit.cover,
-            ),
+            child: Image.asset('assets/images/signIn.png', fit: BoxFit.cover),
           ),
-          Container(
-            color: Colors.black.withValues(alpha: 0.2),
-          ),
+          Container(color: Colors.black.withValues(alpha: 0.2)),
           //sign up form
           SafeArea(
             child: SingleChildScrollView(
@@ -369,9 +404,7 @@ class _SignUpState extends State<SignUp> {
                               },
                               child: const Text(
                                 'Sign in',
-                                style: TextStyle(
-                                  color: Colors.indigo,
-                                ),
+                                style: TextStyle(color: Colors.indigo),
                               ),
                             ),
                           ],
@@ -381,27 +414,25 @@ class _SignUpState extends State<SignUp> {
                           onTap: _isRegistering
                               ? null
                               : () async {
-                            await getImageFromGallery();
-                            await savePicture();
-                          },
+                                  await getImageFromGallery();
+                                  await savePicture();
+                                },
                           child: ClipOval(
                             child: _profileImage == null
                                 ? Image.asset(
-                              'assets/images/profileImageDefault.jpg',
-                              width: 150,
-                              height: 150,
-                              fit: BoxFit.cover,
-                            )
+                                    'assets/images/profileImageDefault.jpg',
+                                    width: 150,
+                                    height: 150,
+                                    fit: BoxFit.cover,
+                                  )
                                 : Image.file(
-                              _profileImage!,
-                              width: 150,
-                              height: 150,
-                              fit: BoxFit.cover,
-                            ),
+                                    _profileImage!,
+                                    width: 150,
+                                    height: 150,
+                                    fit: BoxFit.cover,
+                                  ),
                           ),
                         ),
-
-
 
                         //username
                         const Text(
@@ -477,8 +508,13 @@ class _SignUpState extends State<SignUp> {
                           keyboardType: TextInputType.phone,
                           textInputAction: TextInputAction.next,
                           autovalidateMode: AutovalidateMode.onUserInteraction,
+                          validator: _validatePhoneNumber,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(11),
+                          ],
                           decoration: InputDecoration(
-                            hintText: 'enter your phone number',
+                            hintText: 'e.g. 0123456789 or 01112345678',
                             filled: true,
                             fillColor: Colors.grey.shade200,
                             contentPadding: const EdgeInsets.symmetric(
@@ -494,18 +530,49 @@ class _SignUpState extends State<SignUp> {
 
                         const SizedBox(height: 15),
 
+                        // Address label
+                        const Text(
+                          'Address',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 6),
 
+                        TextFormField(
+                          controller: _addressController,
+                          keyboardType: TextInputType.streetAddress,
+                          textInputAction: TextInputAction.newline,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          validator: _validateAddress,
+                          maxLines: 3,
+                          maxLength: 200,
+                          decoration: InputDecoration(
+                            hintText: 'Enter your home address',
+                            filled: true,
+                            fillColor: Colors.grey.shade200,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(18),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 15),
                         // Password label
                         const Text(
                           'Password',
                           style: TextStyle(fontWeight: FontWeight.w600),
                         ),
+
                         //password field
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: _passwordController,
                           obscureText: _obscurePassword,
-                          textInputAction: TextInputAction.next,//purpose
+                          textInputAction: TextInputAction.next, //purpose
                           autovalidateMode: AutovalidateMode.onUserInteraction,
                           validator: _validatePassword,
                           decoration: InputDecoration(
@@ -558,12 +625,15 @@ class _SignUpState extends State<SignUp> {
                             ),
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                                _obscureConfirmPassword
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
                                 color: Colors.grey,
                               ),
-                              onPressed: (){
+                              onPressed: () {
                                 setState(() {
-                                  _obscureConfirmPassword = !_obscureConfirmPassword;
+                                  _obscureConfirmPassword =
+                                      !_obscureConfirmPassword;
                                 });
                               },
                             ),
@@ -571,17 +641,19 @@ class _SignUpState extends State<SignUp> {
                         ),
                         const SizedBox(height: 24),
 
-
                         //sign up button
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: () async{
-                              if(!_formKey.currentState!.validate()){
-                                return;
-                              }
-                              await _registerAccount();
-                            },
+                            onPressed: _isRegistering
+                                ? null
+                                : () async {
+                                    if (!_formKey.currentState!.validate()) {
+                                      return;
+                                    }
+
+                                    await _registerAccount();
+                                  },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.indigo.shade900,
                               foregroundColor: Colors.white,
@@ -592,20 +664,20 @@ class _SignUpState extends State<SignUp> {
                             ),
                             child: _isRegistering
                                 ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
                                 : const Text(
-                              'Sign Up',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                                    'Sign Up',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                           ),
                         ),
                       ],

@@ -8,12 +8,10 @@ class HeavyRainStationsPage extends StatefulWidget {
   const HeavyRainStationsPage({super.key});
 
   @override
-  State<HeavyRainStationsPage> createState() =>
-      _HeavyRainStationsPageState();
+  State<HeavyRainStationsPage> createState() => _HeavyRainStationsPageState();
 }
 
-class _HeavyRainStationsPageState
-    extends State<HeavyRainStationsPage> {
+class _HeavyRainStationsPageState extends State<HeavyRainStationsPage> {
   final RainfallService _rainfallService = RainfallService();
 
   bool _isLoading = true;
@@ -39,14 +37,17 @@ class _HeavyRainStationsPageState
   }
 
   List<String> get _districts {
-    final values = _stations
-        .where((station) =>
-    _selectedState == 'All' || station.state == _selectedState)
-        .map((station) => station.district)
-        .where((district) => district.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
+    final values =
+        _stations
+            .where(
+              (station) =>
+                  _selectedState == 'All' || station.state == _selectedState,
+            )
+            .map((station) => station.district)
+            .where((district) => district.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
     return ['All', ...values];
   }
 
@@ -54,9 +55,10 @@ class _HeavyRainStationsPageState
     final result = _stations.where((station) {
       final matchesState =
           _selectedState == 'All' || station.state == _selectedState;
-      final matchesDistrict = _selectedDistrict == 'All' ||
-          station.district == _selectedDistrict;
-      final matchesIntensity = _selectedIntensity == 'All' ||
+      final matchesDistrict =
+          _selectedDistrict == 'All' || station.district == _selectedDistrict;
+      final matchesIntensity =
+          _selectedIntensity == 'All' ||
           station.intensity == _selectedIntensity;
       return matchesState && matchesDistrict && matchesIntensity;
     }).toList();
@@ -80,7 +82,7 @@ class _HeavyRainStationsPageState
     }
 
     try {
-      final stations =await _rainfallService.fetchRainfallStations();
+      final stations = await _rainfallService.fetchRainfallStations();
 
       if (!mounted) {
         return;
@@ -132,13 +134,10 @@ class _HeavyRainStationsPageState
     }
   }
 
-
   Widget _buildStationCard(RainfallStation station) {
-    final intensityColor =
-    _intensityColor(station.intensity);
+    final intensityColor = _intensityColor(station.intensity);
 
-    final intensityBackground =
-    _intensityBackground(station.intensity);
+    final intensityBackground = _intensityBackground(station.intensity);
 
     return InkWell(
       borderRadius: BorderRadius.circular(14),
@@ -156,9 +155,7 @@ class _HeavyRainStationsPageState
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: const Color(0xFFE3E3EA),
-          ),
+          border: Border.all(color: const Color(0xFFE3E3EA)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,10 +219,7 @@ class _HeavyRainStationsPageState
             ),
             const SizedBox(width: 8),
             Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 9,
-                vertical: 5,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
               decoration: BoxDecoration(
                 color: intensityBackground,
                 borderRadius: BorderRadius.circular(10),
@@ -289,10 +283,12 @@ class _HeavyRainStationsPageState
                   contentPadding: EdgeInsets.symmetric(horizontal: 10),
                 ),
                 items: _states
-                    .map((value) => DropdownMenuItem(
-                  value: value,
-                  child: Text(value, overflow: TextOverflow.ellipsis),
-                ))
+                    .map(
+                      (value) => DropdownMenuItem(
+                        value: value,
+                        child: Text(value, overflow: TextOverflow.ellipsis),
+                      ),
+                    )
                     .toList(),
                 onChanged: (value) {
                   if (value == null) return;
@@ -315,10 +311,12 @@ class _HeavyRainStationsPageState
                   contentPadding: EdgeInsets.symmetric(horizontal: 10),
                 ),
                 items: _districts
-                    .map((value) => DropdownMenuItem(
-                  value: value,
-                  child: Text(value, overflow: TextOverflow.ellipsis),
-                ))
+                    .map(
+                      (value) => DropdownMenuItem(
+                        value: value,
+                        child: Text(value, overflow: TextOverflow.ellipsis),
+                      ),
+                    )
                     .toList(),
                 onChanged: (value) {
                   if (value != null) {
@@ -336,9 +334,7 @@ class _HeavyRainStationsPageState
   Widget _buildBody() {
     if (_isLoading) {
       return const Center(
-        child: CircularProgressIndicator(
-          color: Color(0xFF3730A3),
-        ),
+        child: CircularProgressIndicator(color: Color(0xFF3730A3)),
       );
     }
 
@@ -349,27 +345,17 @@ class _HeavyRainStationsPageState
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                Icons.error_outline,
-                color: Colors.red,
-                size: 50,
-              ),
+              const Icon(Icons.error_outline, color: Colors.red, size: 50),
               const SizedBox(height: 12),
               const Text(
                 'Unable to load rainfall stations',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Text(
                 _error!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.grey,
-                  fontSize: 12,
-                ),
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
               ),
               const SizedBox(height: 15),
               ElevatedButton(
@@ -409,7 +395,7 @@ class _HeavyRainStationsPageState
                 Expanded(
                   child: Text(
                     '${shownStations.length} rainfall '
-                        '${shownStations.length == 1 ? 'station' : 'stations'}',
+                    '${shownStations.length == 1 ? 'station' : 'stations'}',
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
@@ -422,10 +408,7 @@ class _HeavyRainStationsPageState
           const SizedBox(height: 8),
           const Text(
             'Current one-hour reading and previous 6 daily totals',
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 11,
-            ),
+            style: TextStyle(color: Colors.grey, fontSize: 11),
           ),
           const SizedBox(height: 16),
           if (shownStations.isEmpty)
@@ -441,19 +424,13 @@ class _HeavyRainStationsPageState
                   SizedBox(height: 12),
                   Text(
                     'No rainfall stations found',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   SizedBox(height: 5),
                   Text(
                     'Try selecting another state, district or intensity.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],
               ),
@@ -478,10 +455,7 @@ class _HeavyRainStationsPageState
           children: [
             Text(
               'Rainfall Stations',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             Text(
               'Current and recent rainfall',

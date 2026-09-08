@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -14,6 +15,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _phoneNumberController = TextEditingController();
+  final _addressController = TextEditingController();
 
   File? _newProfileImage;
   String? _existingImageUrl;
@@ -31,7 +33,32 @@ class _EditProfilePageState extends State<EditProfilePage> {
   void dispose() {
     _usernameController.dispose();
     _phoneNumberController.dispose();
+    _addressController.dispose();
     super.dispose();
+  }
+
+  String _toLocalPhoneNumber(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return '';
+    }
+
+    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (digits.startsWith('60')) {
+      return '0${digits.substring(2)}';
+    }
+
+    return digits;
+  }
+
+  String _toInternationalPhoneNumber(String value) {
+    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (digits.startsWith('0')) {
+      return '+60${digits.substring(1)}';
+    }
+
+    return '+$digits';
   }
 
   Future<void> _loadExistingProfile() async {
@@ -42,14 +69,23 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
       final data = await supabase
           .from('profiles')
-          .select('full_name, phone_number, profile_image_url')
+          .select('full_name, phone_number, address, profile_image_url')
           .eq('id', user.id)
           .single();
 
+      if (!mounted) return;
+
       setState(() {
-        _usernameController.text = data['full_name'] as String? ?? '';
-        _phoneNumberController.text = data['phone_number'] as String? ?? '';
-        _existingImageUrl = data['profile_image_url'] as String?;
+        _usernameController.text = data['full_name']?.toString() ?? '';
+
+        _phoneNumberController.text = _toLocalPhoneNumber(
+          data['phone_number']?.toString(),
+        );
+
+        _addressController.text = data['address']?.toString() ?? '';
+
+        _existingImageUrl = data['profile_image_url']?.toString();
+
         _isLoading = false;
       });
     } catch (e) {
@@ -87,6 +123,41 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return null;
   }
 
+  String? _validatePhoneNumber(String? value) {
+    final phone = value?.replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+
+    if (phone.isEmpty) {
+      return 'Please enter your phone number';
+    }
+
+    final normalMobile = RegExp(r'^01[02-9]\d{7}$');
+    final elevenDigitMobile = RegExp(r'^011\d{8}$');
+
+    if (!normalMobile.hasMatch(phone) && !elevenDigitMobile.hasMatch(phone)) {
+      return 'Enter 01X-XXX XXXX or 011-XXXX XXXX';
+    }
+
+    return null;
+  }
+
+  String? _validateAddress(String? value) {
+    final address = value?.trim() ?? '';
+
+    if (address.isEmpty) {
+      return 'Please enter your address';
+    }
+
+    if (address.length < 5) {
+      return 'Address must have at least 5 characters';
+    }
+
+    if (address.length > 200) {
+      return 'Address cannot exceed 200 characters';
+    }
+
+    return null;
+  }
+
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -112,23 +183,32 @@ class _EditProfilePageState extends State<EditProfilePage> {
         final String storagePath =
             '${user.id}/profile_${DateTime.now().millisecondsSinceEpoch}.$extension';
 
-        await supabase.storage.from('profile-images').upload(
-          storagePath,
-          _newProfileImage!,
-          fileOptions: FileOptions(contentType: contentType),
-        );
+        await supabase.storage
+            .from('profile-images')
+            .upload(
+              storagePath,
+              _newProfileImage!,
+              fileOptions: FileOptions(contentType: contentType),
+            );
 
-        profileImageUrl =
-            supabase.storage.from('profile-images').getPublicUrl(storagePath);
+        profileImageUrl = supabase.storage
+            .from('profile-images')
+            .getPublicUrl(storagePath);
       }
 
-      await supabase.from('profiles').update({
-        'full_name': _usernameController.text.trim(),
-        'phone_number': _phoneNumberController.text.trim().isEmpty
-            ? null
-            : _phoneNumberController.text.trim(),
-        'profile_image_url': profileImageUrl,
-      }).eq('id', user.id);
+      final formattedPhone = _toInternationalPhoneNumber(
+        _phoneNumberController.text,
+      );
+
+      await supabase
+          .from('profiles')
+          .update({
+            'full_name': _usernameController.text.trim(),
+            'phone_number': formattedPhone,
+            'address': _addressController.text.trim(),
+            'profile_image_url': profileImageUrl,
+          })
+          .eq('id', user.id);
 
       if (!mounted) return;
 
@@ -139,9 +219,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
       Navigator.pop(context, true); // Return true so caller can refresh.
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update profile: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to update profile: $e')));
     } finally {
       if (mounted) {
         setState(() {
@@ -154,161 +234,197 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Edit Profile'),
-      ),
+      appBar: AppBar(title: const Text('Edit Profile')),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: GestureDetector(
-                    onTap: _isSaving ? null : _pickImage,
-                    child: Stack(
-                      children: [
-                        ClipOval(
-                          child: _newProfileImage != null
-                              ? Image.file(
-                            _newProfileImage!,
-                            width: 130,
-                            height: 130,
-                            fit: BoxFit.cover,
-                          )
-                              : (_existingImageUrl != null
-                              ? Image.network(
-                            _existingImageUrl!,
-                            width: 130,
-                            height: 130,
-                            fit: BoxFit.cover,
-                            errorBuilder:
-                                (context, error, stackTrace) {
-                              return Image.asset(
-                                'assets/images/profileImageDefault.jpg',
-                                width: 130,
-                                height: 130,
-                                fit: BoxFit.cover,
-                              );
-                            },
-                          )
-                              : Image.asset(
-                            'assets/images/profileImageDefault.jpg',
-                            width: 130,
-                            height: 130,
-                            fit: BoxFit.cover,
-                          )),
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: const BoxDecoration(
-                              color: Colors.indigo,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.camera_alt,
-                              color: Colors.white,
-                              size: 18,
-                            ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: GestureDetector(
+                          onTap: _isSaving ? null : _pickImage,
+                          child: Stack(
+                            children: [
+                              ClipOval(
+                                child: _newProfileImage != null
+                                    ? Image.file(
+                                        _newProfileImage!,
+                                        width: 130,
+                                        height: 130,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : (_existingImageUrl != null
+                                          ? Image.network(
+                                              _existingImageUrl!,
+                                              width: 130,
+                                              height: 130,
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (context, error, stackTrace) {
+                                                    return Image.asset(
+                                                      'assets/images/profileImageDefault.jpg',
+                                                      width: 130,
+                                                      height: 130,
+                                                      fit: BoxFit.cover,
+                                                    );
+                                                  },
+                                            )
+                                          : Image.asset(
+                                              'assets/images/profileImageDefault.jpg',
+                                              width: 130,
+                                              height: 130,
+                                              fit: BoxFit.cover,
+                                            )),
+                              ),
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.indigo,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.camera_alt,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 32),
-
-                const Text(
-                  'Username',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 6),
-                TextFormField(
-                  controller: _usernameController,
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                  validator: _validateUsername,
-                  decoration: InputDecoration(
-                    hintText: 'enter your username',
-                    filled: true,
-                    fillColor: Colors.grey.shade200,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 15),
-
-                const Text(
-                  'Phone',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 6),
-                TextFormField(
-                  controller: _phoneNumberController,
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    hintText: 'enter your phone number',
-                    filled: true,
-                    fillColor: Colors.grey.shade200,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 32),
-
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isSaving ? null : _saveProfile,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.indigo.shade900,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
                       ),
-                    ),
-                    child: _isSaving
-                        ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
+                      const SizedBox(height: 32),
+
+                      const Text(
+                        'Username',
+                        style: TextStyle(fontWeight: FontWeight.w600),
                       ),
-                    )
-                        : const Text(
-                      'Save Changes',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: _usernameController,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        validator: _validateUsername,
+                        decoration: InputDecoration(
+                          hintText: 'enter your username',
+                          filled: true,
+                          fillColor: Colors.grey.shade200,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 15),
+
+                      const Text(
+                        'Phone',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: _phoneNumberController,
+                        keyboardType: TextInputType.phone,
+                        textInputAction: TextInputAction.next,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        validator: _validatePhoneNumber,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(11),
+                        ],
+                        decoration: InputDecoration(
+                          hintText: 'e.g. 0123456789 or 01112345678',
+                          filled: true,
+                          fillColor: Colors.grey.shade200,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 15),
+
+                      const Text(
+                        'Address',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 6),
+
+                      TextFormField(
+                        controller: _addressController,
+                        keyboardType: TextInputType.streetAddress,
+                        textInputAction: TextInputAction.newline,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        validator: _validateAddress,
+                        maxLines: 3,
+                        maxLength: 200,
+                        decoration: InputDecoration(
+                          hintText: 'Enter your home address',
+                          filled: true,
+                          fillColor: Colors.grey.shade200,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(18),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _isSaving ? null : _saveProfile,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.indigo.shade900,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
+                          child: _isSaving
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  'Save Changes',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
-      ),
     );
   }
 }

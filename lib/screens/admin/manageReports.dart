@@ -1,21 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:assignment_flood/screens/reports/flood_report_details.dart';
 
 class ManageReportsPage extends StatefulWidget {
   const ManageReportsPage({super.key});
 
   @override
-  State<ManageReportsPage> createState() =>
-      _ManageReportsPageState();
+  State<ManageReportsPage> createState() => _ManageReportsPageState();
 }
 
-class _ManageReportsPageState
-    extends State<ManageReportsPage> {
+class _ManageReportsPageState extends State<ManageReportsPage> {
   final SupabaseClient _supabase = Supabase.instance.client;
 
   bool _isLoading = true;
   String _selectedFilter = 'all';
-  String? _updatingReportId;
 
   List<Map<String, dynamic>> _reports = [];
 
@@ -31,10 +29,14 @@ class _ManageReportsPageState
     });
 
     try {
-      final data = await _supabase.from('flood_reports').select(
-        'id, user_id, full_name, latitude, longitude, '
-            'description, photo_url, status, verified_by, verified_at',
-      );
+      final data = await _supabase
+          .from('flood_reports')
+          .select(
+              'id, user_id, full_name, latitude, longitude, '
+                  'description, photo_url, status, created_at, '
+                  'verified_by, verified_at',
+            )
+          .order('created_at', ascending: false);
 
       if (!mounted) return;
 
@@ -49,11 +51,9 @@ class _ManageReportsPageState
         _isLoading = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to load reports: $error'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to load reports: $error')));
     }
   }
 
@@ -67,57 +67,6 @@ class _ManageReportsPageState
     }).toList();
   }
 
-  Future<void> _updateStatus(
-      String reportId,
-      String newStatus,
-      ) async {
-    final admin = _supabase.auth.currentUser;
-
-    if (admin == null) return;
-
-    setState(() {
-      _updatingReportId = reportId;
-    });
-
-    try {
-      await _supabase
-          .from('flood_reports')
-          .update({
-        'status': newStatus,
-        'verified_by': admin.id,
-        'verified_at': DateTime.now().toIso8601String(),
-      })
-          .eq('id', reportId);
-
-      await _loadReports();
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            newStatus == 'verified'
-                ? 'Report verified successfully'
-                : 'Report rejected',
-          ),
-        ),
-      );
-    } catch (error) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to update report: $error'),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _updatingReportId = null;
-        });
-      }
-    }
-  }
 
   Color _statusColor(String status) {
     switch (status) {
@@ -142,17 +91,57 @@ class _ManageReportsPageState
         });
       },
       selectedColor: const Color(0xFF3730A3),
-      labelStyle: TextStyle(
-        color: selected ? Colors.white : Colors.black,
-      ),
+      labelStyle: TextStyle(color: selected ? Colors.white : Colors.black),
     );
   }
 
+  String _formatDate(dynamic value) {
+    if (value == null) {
+      return 'Date unavailable';
+    }
+
+    final date = DateTime.tryParse(
+      value.toString(),
+    )?.toLocal();
+
+    if (date == null) {
+      return 'Date unavailable';
+    }
+
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final hour = date.hour.toString().padLeft(2, '0');
+    final minute = date.minute.toString().padLeft(2, '0');
+
+    return '$day/$month/${date.year}  $hour:$minute';
+  }
+
+  Future<void> _openReportDetails(
+      Map<String, dynamic> report,
+      ) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FloodReportDetailsPage(
+          report: report,
+          isAdmin: true,
+        ),
+      ),
+    );
+
+    // Refresh because the admin may have verified or rejected it.
+    await _loadReports();
+  }
+
   Widget _buildReportCard(Map<String, dynamic> report) {
-    final id = report['id'].toString();
-    final status = report['status']?.toString() ?? 'pending';
-    final imageUrl = report['photo_url']?.toString();
-    final isUpdating = _updatingReportId == id;
+    final status =
+        report['status']?.toString() ?? 'pending';
+
+    final description =
+        report['description']?.toString().trim() ?? '';
+
+    final fullName =
+        report['full_name']?.toString().trim() ?? '';
 
     return Card(
       elevation: 0,
@@ -163,147 +152,107 @@ class _ManageReportsPageState
           color: Color(0xFFE4E4EA),
         ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(15),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const CircleAvatar(
-                  backgroundColor: Color(0xFFE8E7FF),
-                  child: Icon(
-                    Icons.flood,
-                    color: Color(0xFF3730A3),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    report['full_name']?.toString() ??
-                        'Unknown user',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {
+          _openReportDetails(report);
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(15),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const CircleAvatar(
+                    backgroundColor: Color(0xFFE8E7FF),
+                    child: Icon(
+                      Icons.flood,
+                      color: Color(0xFF3730A3),
                     ),
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _statusColor(status)
-                        .withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: Text(
-                    status.toUpperCase(),
-                    style: TextStyle(
-                      color: _statusColor(status),
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      fullName.isEmpty
+                          ? 'Unknown user'
+                          : fullName,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _statusColor(status)
+                          .withValues(alpha: 0.12),
+                      borderRadius:
+                      BorderRadius.circular(15),
+                    ),
+                    child: Text(
+                      status.toUpperCase(),
+                      style: TextStyle(
+                        color: _statusColor(status),
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
 
-            const SizedBox(height: 14),
+              const SizedBox(height: 13),
 
-            if (imageUrl != null && imageUrl.isNotEmpty)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  imageUrl,
-                  width: double.infinity,
-                  height: 180,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) {
-                    return const SizedBox.shrink();
-                  },
+              Text(
+                description.isEmpty
+                    ? 'No description provided'
+                    : description,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 14,
+                  height: 1.4,
                 ),
               ),
 
-            if (imageUrl != null && imageUrl.isNotEmpty)
               const SizedBox(height: 12),
 
-            Text(
-              report['description']?.toString() ??
-                  'No description',
-              style: const TextStyle(
-                fontSize: 14,
-                height: 1.4,
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            Row(
-              children: [
-                const Icon(
-                  Icons.location_on_outlined,
-                  size: 18,
-                  color: Colors.grey,
-                ),
-                const SizedBox(width: 5),
-                Expanded(
-                  child: Text(
-                    '${report['latitude']}, '
-                        '${report['longitude']}',
-                    style: const TextStyle(
-                      color: Colors.grey,
-                      fontSize: 12,
+              Row(
+                children: [
+                  const Icon(
+                    Icons.schedule_outlined,
+                    size: 17,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      _formatDate(report['created_at']),
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-
-            if (status == 'pending') ...[
-              const SizedBox(height: 15),
-              const Divider(),
-              const SizedBox(height: 8),
-
-              if (isUpdating)
-                const Center(
-                  child: CircularProgressIndicator(),
-                )
-              else
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          _updateStatus(id, 'rejected');
-                        },
-                        icon: const Icon(Icons.close),
-                        label: const Text('Reject'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                        ),
-                      ),
+                  TextButton.icon(
+                    onPressed: () {
+                      _openReportDetails(report);
+                    },
+                    icon: const Icon(
+                      Icons.visibility_outlined,
+                      size: 18,
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          _updateStatus(id, 'verified');
-                        },
-                        icon: const Icon(Icons.verified),
-                        label: const Text('Verify'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                          const Color(0xFF3730A3),
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                    label: const Text('View Details'),
+                  ),
+                ],
+              ),
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -341,16 +290,12 @@ class _ManageReportsPageState
             if (_isLoading)
               const Padding(
                 padding: EdgeInsets.only(top: 100),
-                child: Center(
-                  child: CircularProgressIndicator(),
-                ),
+                child: Center(child: CircularProgressIndicator()),
               )
             else if (displayedReports.isEmpty)
               const Padding(
                 padding: EdgeInsets.only(top: 100),
-                child: Center(
-                  child: Text('No reports found'),
-                ),
+                child: Center(child: Text('No reports found')),
               )
             else
               ...displayedReports.map(_buildReportCard),

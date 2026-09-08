@@ -12,14 +12,9 @@ class SignOut extends StatelessWidget {
         alignment: Alignment.center,
         children: [
           Positioned.fill(
-            child: Image.asset(
-              'assets/images/signIn.png',
-              fit: BoxFit.cover,
-            ),
+            child: Image.asset('assets/images/signIn.png', fit: BoxFit.cover),
           ),
-          Container(
-            color: Colors.black.withValues(alpha: 0.2),
-          ),
+          Container(color: Colors.black.withValues(alpha: 0.2)),
           Center(
             child: Container(
               width: 335,
@@ -34,11 +29,9 @@ class SignOut extends StatelessWidget {
                 children: [
                   const Icon(Icons.logout, size: 48, color: Colors.indigo),
                   const SizedBox(height: 16),
-                  const Text('Sign Out',
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  const Text(
+                    'Sign Out',
+                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   const Text(
@@ -59,15 +52,17 @@ class SignOut extends StatelessWidget {
                           return;
                         }
 
-                        Navigator.of(context).popUntil((route) => route.isFirst);
+                        Navigator.of(
+                          context,
+                        ).popUntil((route) => route.isFirst);
                       },
                       style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.indigo.shade900,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          )
+                        backgroundColor: Colors.indigo.shade900,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
                       ),
                       child: const Text(
                         'Sign Out',
@@ -86,21 +81,18 @@ class SignOut extends StatelessWidget {
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          )
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
                       ),
-                      child: const Text(
-                        'Cancel',
-                      ),
+                      child: const Text('Cancel'),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-
         ],
       ),
     );

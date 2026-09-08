@@ -66,7 +66,6 @@ class _SignInState extends State<SignIn> {
     super.dispose();
   }
 
-
   Future<void> _signIn() async {
     setState(() {
       _isSigningIn = true;
@@ -95,11 +94,7 @@ class _SignInState extends State<SignIn> {
             .eq('id', user.id)
             .single();
 
-        role = profile['role']
-            ?.toString()
-            .trim()
-            .toLowerCase() ??
-            'user';
+        role = profile['role']?.toString().trim().toLowerCase() ?? 'user';
 
         debugPrint('Logged-in user ID: ${user.id}');
         debugPrint('Role received: $role');
@@ -115,23 +110,28 @@ class _SignInState extends State<SignIn> {
       if (role == 'admin') {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => const AdminPage(),
-          ),
+          MaterialPageRoute(builder: (context) => const AdminPage()),
         );
       } else {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => const Dashboard(),
-          ),
+          MaterialPageRoute(builder: (context) => const Dashboard()),
         );
       }
     } on AuthException catch (e) {
-      if (!mounted) {
-        return;
+      if (!mounted) return;
+
+      final errorMessage = e.message.toLowerCase();
+
+      if (errorMessage.contains('invalid login credentials')) {
+        _showMessage('No account found.');
+      } else if (errorMessage.contains('email not confirmed')) {
+        _showMessage(
+          'Your email has not been confirmed. Please check your email.',
+        );
+      } else {
+        _showMessage('Sign in failed. Please try again.');
       }
-      _showMessage(e.message);
     } catch (e) {
       if (!mounted) {
         return;
@@ -153,7 +153,7 @@ class _SignInState extends State<SignIn> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: (){
+          onPressed: () {
             Navigator.pop(context);
           },
         ),
@@ -164,14 +164,9 @@ class _SignInState extends State<SignIn> {
         alignment: Alignment.center,
         children: [
           Positioned.fill(
-            child: Image.asset(
-              'assets/images/signIn.png',
-              fit: BoxFit.cover,
-            ),
+            child: Image.asset('assets/images/signIn.png', fit: BoxFit.cover),
           ),
-          Container(
-            color: Colors.black.withValues(alpha: 0.2),
-          ),
+          Container(color: Colors.black.withValues(alpha: 0.2)),
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(vertical: 20),
@@ -211,9 +206,7 @@ class _SignInState extends State<SignIn> {
                               },
                               child: const Text(
                                 'Signup',
-                                style: TextStyle(
-                                  color: Colors.indigo,
-                                ),
+                                style: TextStyle(color: Colors.indigo),
                               ),
                             ),
                           ],
@@ -221,10 +214,7 @@ class _SignInState extends State<SignIn> {
 
                         const Text(
                           'Sign in to your user account',
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 14,
-                          ),
+                          style: TextStyle(color: Colors.grey, fontSize: 14),
                         ),
 
                         const SizedBox(height: 20),
@@ -304,11 +294,13 @@ class _SignInState extends State<SignIn> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: _isSigningIn ? null : () async{
-                              if(_formKey.currentState!.validate()){
-                                await _signIn();
-                              }
-                            },
+                            onPressed: _isSigningIn
+                                ? null
+                                : () async {
+                                    if (_formKey.currentState!.validate()) {
+                                      await _signIn();
+                                    }
+                                  },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.indigo.shade900,
                               foregroundColor: Colors.white,

@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AnnouncementCarousel extends StatefulWidget {
-  const AnnouncementCarousel({super.key});
+  final VoidCallback onTap;
+  const AnnouncementCarousel({super.key, required this.onTap});
 
   @override
-  State<AnnouncementCarousel> createState() =>
-      _AnnouncementCarouselState();
+  State<AnnouncementCarousel> createState() => _AnnouncementCarouselState();
 }
 
 class _AnnouncementCarouselState extends State<AnnouncementCarousel> {
@@ -30,7 +30,7 @@ class _AnnouncementCarouselState extends State<AnnouncementCarousel> {
     _loadAnnouncements(); // initial fetch
     _refreshTimer = Timer.periodic(
       const Duration(minutes: 5),
-          (_) => _loadAnnouncements(),
+      (_) => _loadAnnouncements(),
     );
   }
 
@@ -39,9 +39,9 @@ class _AnnouncementCarouselState extends State<AnnouncementCarousel> {
       final data = await _supabase
           .from('announcements')
           .select(
-        'id, title, message, area, announcement_type, '
+            'id, title, message, area, announcement_type, '
             'created_at, expires_at',
-      )
+          )
           .eq('is_active', true)
           .order('created_at', ascending: false);
 
@@ -67,21 +67,18 @@ class _AnnouncementCarouselState extends State<AnnouncementCarousel> {
       }
 
       if (_announcements.length > 1) {
-        _slideTimer = Timer.periodic(
-          const Duration(seconds: 5),
-              (_) {
-            if (!_pageController.hasClients) return;
+        _slideTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+          if (!_pageController.hasClients) return;
 
-            final currentPage = _pageController.page?.round() ?? 0;
-            final nextPage = (currentPage + 1) % _announcements.length;
+          final currentPage = _pageController.page?.round() ?? 0;
+          final nextPage = (currentPage + 1) % _announcements.length;
 
-            _pageController.animateToPage(
-              nextPage,
-              duration: const Duration(milliseconds: 500),
-              curve: Curves.easeInOut,
-            );
-          },
-        );
+          _pageController.animateToPage(
+            nextPage,
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeInOut,
+          );
+        });
       }
     } catch (error) {
       debugPrint('Announcement error: $error');
@@ -107,9 +104,7 @@ class _AnnouncementCarouselState extends State<AnnouncementCarousel> {
     if (_isLoading) {
       return const SizedBox(
         height: 78,
-        child: Center(
-          child: CircularProgressIndicator(),
-        ),
+        child: Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -126,75 +121,73 @@ class _AnnouncementCarouselState extends State<AnnouncementCarousel> {
         itemBuilder: (context, index) {
           final announcement = _announcements[index];
 
-          return Container(
-            margin: const EdgeInsets.symmetric(
-              horizontal: 2,
-              vertical: 6,
-            ),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 12,
-            ),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [
-                  Color(0xFF3730A3),
-                  Color(0xFF625BD9),
-                ],
-              ),
+          return Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: widget.onTap,
               borderRadius: BorderRadius.circular(16),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x22000000),
-                  blurRadius: 8,
-                  offset: Offset(0, 4),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
                 ),
-              ],
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.campaign_rounded,
-                  color: Colors.white,
-                  size: 28,
-                ),
-                const SizedBox(width: 12),
-
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        announcement['title']?.toString() ??
-                            'Announcement',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        announcement['message']?.toString() ?? '',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF3730A3), Color(0xFF625BD9)],
                   ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x22000000),
+                      blurRadius: 8,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
                 ),
-
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: Colors.white,
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.campaign_rounded,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            announcement['title']?.toString() ?? 'Announcement',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            announcement['message']?.toString() ?? '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: Colors.white,
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           );
         },

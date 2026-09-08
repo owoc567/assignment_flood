@@ -5,6 +5,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:developer';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:assignment_flood/services/offline_sos_database.dart';
+import 'package:assignment_flood/services/offline_profile_service.dart';
+import 'package:assignment_flood/services/offline_sos_sync_service.dart';
 
 class SosPage extends StatefulWidget {
   const SosPage({super.key});
@@ -43,6 +45,18 @@ class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
     // Re-check permission/GPS status when returning from system settings.
     if (state == AppLifecycleState.resumed) {
       checkStatus();
+      OfflineSosSyncService.instance.syncPendingSos();
+    }
+  }
+
+  Future<void> _checkOfflineSosRecords() async {
+    final records =
+    await OfflineSosDatabase.instance.getAllOfflineSos();
+
+    debugPrint('SQLite SOS record count: ${records.length}');
+
+    for (final record in records) {
+      debugPrint('SQLite SOS: $record');
     }
   }
 
@@ -98,7 +112,7 @@ class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
           title: const Text('Permission Needed'),
           content: const Text(
             'Location permission was previously denied. Please enable it '
-                'manually in your device settings to use the SOS feature.',
+            'manually in your device settings to use the SOS feature.',
           ),
           actions: [
             TextButton(
@@ -154,8 +168,8 @@ class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
         title: const Text('Confirm SOS'),
         content: const Text(
           'This will send your current location and message to flood '
-              'response authorities as an emergency alert. Only use this if '
-              'you are in genuine danger. Continue?',
+          'response authorities as an emergency alert. Only use this if '
+          'you are in genuine danger. Continue?',
         ),
         actions: [
           TextButton(
@@ -185,7 +199,8 @@ class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
     required double longitude,
     required String message,
   }) async {
-    final sosMessage = '''
+    final sosMessage =
+        '''
     EMERGENCY FLOOD SOS
     
     Name: $fullName
@@ -199,23 +214,17 @@ class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
     Please provide emergency assistance.
     ''';
 
-    final encodedMessage =
-    Uri.encodeComponent(sosMessage);
+    final encodedMessage = Uri.encodeComponent(sosMessage);
 
-    final smsUri = Uri.parse(
-      'sms:$_adminPhoneNumber?body=$encodedMessage',
-    );
+    final smsUri = Uri.parse('sms:$_adminPhoneNumber?body=$encodedMessage');
 
-      try {
-        return await launchUrl(
-          smsUri,
-          mode: LaunchMode.externalApplication,
-        );
-      } catch (error) {
-        debugPrint('Unable to open SMS: $error');
-        return false;
-      }
+    try {
+      return await launchUrl(smsUri, mode: LaunchMode.externalApplication);
+    } catch (error) {
+      debugPrint('Unable to open SMS: $error');
+      return false;
     }
+  }
 
   Future<void> _sendSos() async {
     if (_isSending) return;
@@ -229,22 +238,17 @@ class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
 
     try {
       if (user == null) {
-        throw Exception(
-          'You must be signed in to send an SOS.',
-        );
+        throw Exception('You must be signed in to send an SOS.');
       }
 
       // Get the current GPS location.
-      final LocationData locationData =
-      await _location.getLocation();
+      final LocationData locationData = await _location.getLocation();
 
       final latitude = locationData.latitude;
       final longitude = locationData.longitude;
 
       if (latitude == null || longitude == null) {
-        throw Exception(
-          'Unable to get your current location.',
-        );
+        throw Exception('Unable to get your current location.');
       }
 
       String fullName = 'Unknown user';
@@ -258,27 +262,28 @@ class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
             .eq('id', user.id)
             .single();
 
-        fullName =
-            profile['full_name']?.toString() ??
-                'Unknown user';
+        fullName = profile['full_name']?.toString() ?? 'Unknown user';
 
-        phoneNumber =
-            profile['phone_number']?.toString() ?? '';
+        phoneNumber = profile['phone_number']?.toString() ?? '';
       } catch (error) {
         debugPrint(
-          'Could not load profile for SOS: $error',
+          'Could not load online profile for SOS: $error',
         );
 
-        // Use authentication information as fallback.
-        fullName =
-            user.userMetadata?['full_name']?.toString() ??
-                user.email ??
-                'Unknown user';
+        final cachedProfile =
+        await OfflineProfileService.loadProfile(user.id);
 
-        phoneNumber =
-            user.userMetadata?['phone_number']
-                ?.toString() ??
-                '';
+        final cachedName =
+            cachedProfile['full_name']?.trim() ?? '';
+
+        final cachedPhone =
+            cachedProfile['phone_number']?.trim() ?? '';
+
+        fullName = cachedName.isNotEmpty
+            ? cachedName
+            : user.email ?? 'Unknown user';
+
+        phoneNumber = cachedPhone;
       }
 
       final situation = _messageController.text.trim();
@@ -288,10 +293,10 @@ class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
         await supabase.from('sos_alerts').insert({
           'user_id': user.id,
           'full_name': fullName,
+          'phone_number': phoneNumber,
           'latitude': latitude,
           'longitude': longitude,
-          'message':
-          situation.isEmpty ? null : situation,
+          'message': situation.isEmpty ? null : situation,
           'status': 'active',
         });
 
@@ -301,20 +306,22 @@ class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
           _sent = true;
         });
       } catch (supabaseError) {
-        debugPrint(
-          'Online SOS failed: $supabaseError',
-        );
+        debugPrint('Online SOS failed: $supabaseError');
 
         // Second attempt: save the SOS in SQLite.
+        final localId =
         await OfflineSosDatabase.instance.saveOfflineSos(
           userId: user.id,
           fullName: fullName,
           phoneNumber: phoneNumber,
           latitude: latitude,
           longitude: longitude,
-          message:
-          situation.isEmpty ? null : situation,
+          message: situation.isEmpty ? null : situation,
         );
+
+        debugPrint('SOS saved into SQLite. Local ID: $localId');
+
+        await _checkOfflineSosRecords();
 
         if (!mounted) return;
 
@@ -331,9 +338,9 @@ class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
               title: const Text('No Internet Connection'),
               content: const Text(
                 'Your SOS could not be sent to the admin '
-                    'dashboard. It has been saved on this device.\n\n'
-                    'Open SMS now to send your location directly '
-                    'to the emergency contact?',
+                'dashboard. It has been saved on this device.\n\n'
+                'Open SMS now to send your location directly '
+                'to the emergency contact?',
               ),
               actions: [
                 TextButton(
@@ -368,7 +375,7 @@ class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
           if (!smsOpened) {
             _showError(
               'Unable to open the SMS application. '
-                  'Please call the emergency contact directly.',
+              'Please call the emergency contact directly.',
             );
           }
         }
@@ -387,9 +394,7 @@ class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Emergency SOS'),
-      ),
+      appBar: AppBar(title: const Text('Emergency SOS')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -412,7 +417,7 @@ class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
         const SizedBox(height: 8),
         const Text(
           'Sending an SOS shares your current location with flood '
-              'response authorities so they can locate and assist you.',
+          'response authorities so they can locate and assist you.',
           style: TextStyle(color: Colors.grey),
         ),
         const SizedBox(height: 20),
@@ -456,13 +461,13 @@ class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
             onPressed: _isSending ? null : _confirmAndSendSos,
             icon: _isSending
                 ? const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
-              ),
-            )
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
                 : const Icon(Icons.sos),
             label: Text(_isSending ? 'Sending...' : 'Send SOS'),
             style: ElevatedButton.styleFrom(
@@ -497,15 +502,15 @@ class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
           enabled
               ? const Text('Enabled', style: TextStyle(color: Colors.green))
               : ElevatedButton(
-            onPressed: onEnable,
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 8,
-              ),
-            ),
-            child: const Text('Enable'),
-          ),
+                  onPressed: onEnable,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                  ),
+                  child: const Text('Enable'),
+                ),
         ],
       ),
     );
@@ -524,7 +529,7 @@ class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
         const SizedBox(height: 8),
         const Text(
           'Your location and message have been sent to flood response '
-              'authorities. Please stay safe and wait for assistance.',
+          'authorities. Please stay safe and wait for assistance.',
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.grey),
         ),

@@ -75,7 +75,8 @@ class _ReportFloodPageState extends State<ReportFloodPage> {
   }
 
   Future<bool> _ensureLocationReady() async {
-    bool permissionGranted = await handler.Permission.locationWhenInUse.isGranted;
+    bool permissionGranted =
+        await handler.Permission.locationWhenInUse.isGranted;
     if (!permissionGranted) {
       final status = await handler.Permission.locationWhenInUse.request();
       permissionGranted = status == handler.PermissionStatus.granted;
@@ -130,13 +131,13 @@ class _ReportFloodPageState extends State<ReportFloodPage> {
 
       // Upload photo to Supabase Storage under the user's own folder.
       final fileExt = _photo!.path.split('.').last;
-      final fileName =
-          '${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.$fileExt';
       final storagePath = '${user.id}/$fileName';
 
-      await supabase.storage
+      await supabase.storage.from('flood-photos').upload(storagePath, _photo!);
+      final photoUrl = supabase.storage
           .from('flood-photos')
-          .upload(storagePath, _photo!);
+          .getPublicUrl(storagePath);
 
       // Fetch full name from profile, non-critical if it fails.
       String? fullName;
@@ -155,7 +156,7 @@ class _ReportFloodPageState extends State<ReportFloodPage> {
         'latitude': latitude,
         'longitude': longitude,
         'description': _descriptionController.text.trim(),
-        'photo_url': storagePath,
+        'photo_url': photoUrl,
         'status': 'pending',
       });
 
@@ -198,7 +199,7 @@ class _ReportFloodPageState extends State<ReportFloodPage> {
         const SizedBox(height: 8),
         const Text(
           'Your report will be reviewed by flood response authorities '
-              'and used to alert nearby residents.',
+          'and used to alert nearby residents.',
           style: TextStyle(color: Colors.grey),
         ),
         const SizedBox(height: 20),
@@ -214,19 +215,23 @@ class _ReportFloodPageState extends State<ReportFloodPage> {
             ),
             child: _photo == null
                 ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.add_a_photo, size: 40, color: Colors.grey),
-                  SizedBox(height: 8),
-                  Text('Add Photo (required)'),
-                ],
-              ),
-            )
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add_a_photo, size: 40, color: Colors.grey),
+                        SizedBox(height: 8),
+                        Text('Add Photo (required)'),
+                      ],
+                    ),
+                  )
                 : ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.file(_photo!, fit: BoxFit.cover, width: double.infinity),
-            ),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.file(
+                      _photo!,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                    ),
+                  ),
           ),
         ),
         const SizedBox(height: 20),
@@ -257,17 +262,22 @@ class _ReportFloodPageState extends State<ReportFloodPage> {
             onPressed: _isSubmitting ? null : _submitReport,
             icon: _isSubmitting
                 ? const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-            )
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
                 : const Icon(Icons.send),
             label: Text(_isSubmitting ? 'Submitting...' : 'Submit Report'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30),
+              ),
             ),
           ),
         ),
@@ -281,7 +291,10 @@ class _ReportFloodPageState extends State<ReportFloodPage> {
         const SizedBox(height: 40),
         const Icon(Icons.check_circle, color: Colors.green, size: 72),
         const SizedBox(height: 16),
-        const Text('Report Submitted', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+        const Text(
+          'Report Submitted',
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 8),
         const Text(
           'Thank you. Authorities will review your report shortly.',

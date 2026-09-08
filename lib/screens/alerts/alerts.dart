@@ -146,7 +146,10 @@ class _AlertsPageState extends State<AlertsPage> {
               const SizedBox(height: 6),
               Text(_error!, textAlign: TextAlign.center),
               const SizedBox(height: 14),
-              ElevatedButton(onPressed: _loadAlerts, child: const Text('Retry')),
+              ElevatedButton(
+                onPressed: _loadAlerts,
+                child: const Text('Retry'),
+              ),
             ],
           ),
         ),
@@ -165,7 +168,7 @@ class _AlertsPageState extends State<AlertsPage> {
           else
             SliverList(
               delegate: SliverChildBuilderDelegate(
-                    (context, index) => _alertTile(_myNotifications[index]),
+                (context, index) => _alertTile(_myNotifications[index]),
                 childCount: _myNotifications.length,
               ),
             ),
@@ -175,7 +178,7 @@ class _AlertsPageState extends State<AlertsPage> {
           else
             SliverList(
               delegate: SliverChildBuilderDelegate(
-                    (context, index) => _alertTile(_allActiveAlerts[index]),
+                (context, index) => _alertTile(_allActiveAlerts[index]),
                 childCount: _allActiveAlerts.length,
               ),
             ),
@@ -197,7 +200,11 @@ class _AlertsPageState extends State<AlertsPage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
-          BoxShadow(color: Color(0x12000000), blurRadius: 12, offset: Offset(0, 4)),
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
         ],
       ),
       child: Row(
@@ -213,7 +220,10 @@ class _AlertsPageState extends State<AlertsPage> {
               children: [
                 Text(
                   '${_allActiveAlerts.length} active water-level alerts',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -268,7 +278,10 @@ class _AlertsPageState extends State<AlertsPage> {
         children: [
           Icon(Icons.check_circle_outline, color: Color(0xFF16B86D), size: 58),
           SizedBox(height: 10),
-          Text('No active alerts', style: TextStyle(fontWeight: FontWeight.bold)),
+          Text(
+            'No active alerts',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           SizedBox(height: 4),
           Text('All monitored water levels are currently safe.'),
         ],
@@ -296,7 +309,7 @@ class _AlertsPageState extends State<AlertsPage> {
         ),
         subtitle: Text(
           '${station.river} • ${station.district}\n'
-              '${station.waterLevel.toStringAsFixed(2)} m • Updated ${station.lastUpdated}',
+          '${station.waterLevel.toStringAsFixed(2)} m • Updated ${station.lastUpdated}',
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
@@ -305,7 +318,11 @@ class _AlertsPageState extends State<AlertsPage> {
           children: [
             Text(
               station.status,
-              style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
             ),
             const Icon(Icons.chevron_right, color: Colors.grey),
           ],

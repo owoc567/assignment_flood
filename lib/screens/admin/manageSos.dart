@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ManageSosPage extends StatefulWidget {
   const ManageSosPage({super.key});
@@ -29,10 +30,13 @@ class _ManageSosPageState extends State<ManageSosPage> {
     });
 
     try {
-      final data = await _supabase.from('sos_alerts').select(
-        'id, user_id, full_name, latitude, longitude, '
-            'message, status',
-      );
+      final data = await _supabase
+          .from('sos_alerts')
+          .select(
+            'id, user_id, full_name, phone_number, '
+                'latitude, longitude, message, status, created_at',
+          )
+              .order('created_at', ascending: false);
 
       if (!mounted) return;
 
@@ -48,9 +52,7 @@ class _ManageSosPageState extends State<ManageSosPage> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to load SOS records: $error'),
-        ),
+        SnackBar(content: Text('Failed to load SOS records: $error')),
       );
     }
   }
@@ -61,6 +63,76 @@ class _ManageSosPageState extends State<ManageSosPage> {
     return _alerts.where((alert) {
       return alert['status'] == _filter;
     }).toList();
+  }
+
+  String _formatDate(dynamic value) {
+    if (value == null) {
+      return 'Time unavailable';
+    }
+
+    final date = DateTime.tryParse(
+      value.toString(),
+    )?.toLocal();
+
+    if (date == null) {
+      return 'Time unavailable';
+    }
+
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final hour = date.hour.toString().padLeft(2, '0');
+    final minute = date.minute.toString().padLeft(2, '0');
+
+    return '$day/$month/${date.year}  $hour:$minute';
+  }
+
+  Future<void> _callUser(String phoneNumber) async {
+    final phone = phoneNumber.trim();
+
+    if (phone.isEmpty) {
+      _showMessage('This user did not provide a phone number.');
+      return;
+    }
+
+    final uri = Uri(
+      scheme: 'tel',
+      path: phone,
+    );
+
+    final opened = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!opened) {
+      _showMessage('Unable to open the phone application.');
+    }
+  }
+
+  Future<void> _openLocation({
+    required double latitude,
+    required double longitude,
+  }) async {
+    final uri = Uri.parse(
+      'https://maps.google.com/?q=$latitude,$longitude',
+    );
+
+    final opened = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!opened) {
+      _showMessage('Unable to open the location.');
+    }
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   Future<void> _markResolved(String id) async {
@@ -107,17 +179,13 @@ class _ManageSosPageState extends State<ManageSosPage> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('SOS case marked as resolved'),
-        ),
+        const SnackBar(content: Text('SOS case marked as resolved')),
       );
     } catch (error) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to update SOS case: $error'),
-        ),
+        SnackBar(content: Text('Failed to update SOS case: $error')),
       );
     } finally {
       if (mounted) {
@@ -135,9 +203,7 @@ class _ManageSosPageState extends State<ManageSosPage> {
       label: Text(label),
       selected: selected,
       selectedColor: const Color(0xFF3730A3),
-      labelStyle: TextStyle(
-        color: selected ? Colors.white : Colors.black,
-      ),
+      labelStyle: TextStyle(color: selected ? Colors.white : Colors.black),
       onSelected: (_) {
         setState(() {
           _filter = value;
@@ -151,6 +217,17 @@ class _ManageSosPageState extends State<ManageSosPage> {
     final status = alert['status']?.toString() ?? 'active';
     final isActive = status == 'active';
     final isUpdating = _updatingId == id;
+
+    final phoneNumber =
+        alert['phone_number']?.toString().trim() ?? '';
+
+    final latitude = double.tryParse(
+      alert['latitude']?.toString() ?? '',
+    );
+
+    final longitude = double.tryParse(
+      alert['longitude']?.toString() ?? '',
+    );
 
     return Card(
       elevation: 0,
@@ -178,8 +255,7 @@ class _ManageSosPageState extends State<ManageSosPage> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    alert['full_name']?.toString() ??
-                        'Unknown user',
+                    alert['full_name']?.toString() ?? 'Unknown user',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -200,13 +276,13 @@ class _ManageSosPageState extends State<ManageSosPage> {
             const SizedBox(height: 13),
 
             Text(
-              alert['message']?.toString() ??
-                  'Emergency assistance requested',
+              alert['message']?.toString() ?? 'Emergency assistance requested',
               style: const TextStyle(height: 1.4),
             ),
 
             const SizedBox(height: 10),
 
+            // Location
             Row(
               children: [
                 const Icon(
@@ -227,6 +303,89 @@ class _ManageSosPageState extends State<ManageSosPage> {
               ],
             ),
 
+            const SizedBox(height: 8),
+
+            // Phone number
+            Row(
+              children: [
+                const Icon(
+                  Icons.phone_outlined,
+                  size: 18,
+                  color: Colors.grey,
+                ),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: Text(
+                    phoneNumber.isEmpty
+                        ? 'Phone number unavailable'
+                        : phoneNumber,
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 8),
+
+            // Submission date and time
+            Row(
+              children: [
+                const Icon(
+                  Icons.schedule_outlined,
+                  size: 18,
+                  color: Colors.grey,
+                ),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: Text(
+                    _formatDate(alert['created_at']),
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 14),
+
+            // Contact and map buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: phoneNumber.isEmpty
+                        ? null
+                        : () {
+                      _callUser(phoneNumber);
+                    },
+                    icon: const Icon(Icons.phone_outlined),
+                    label: const Text('Call'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed:
+                    latitude == null || longitude == null
+                        ? null
+                        : () {
+                      _openLocation(
+                        latitude: latitude,
+                        longitude: longitude,
+                      );
+                    },
+                    icon: const Icon(Icons.map_outlined),
+                    label: const Text('Open Map'),
+                  ),
+                ),
+              ],
+            ),
+
             if (isActive) ...[
               const SizedBox(height: 14),
               SizedBox(
@@ -235,22 +394,16 @@ class _ManageSosPageState extends State<ManageSosPage> {
                   onPressed: isUpdating
                       ? null
                       : () {
-                    _markResolved(id);
-                  },
+                          _markResolved(id);
+                        },
                   icon: isUpdating
                       ? const SizedBox(
-                    width: 17,
-                    height: 17,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                    ),
-                  )
+                          width: 17,
+                          height: 17,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Icon(Icons.check_circle_outline),
-                  label: Text(
-                    isUpdating
-                        ? 'Updating...'
-                        : 'Mark as Resolved',
-                  ),
+                  label: Text(isUpdating ? 'Updating...' : 'Mark as Resolved'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
@@ -294,16 +447,12 @@ class _ManageSosPageState extends State<ManageSosPage> {
             if (_isLoading)
               const Padding(
                 padding: EdgeInsets.only(top: 100),
-                child: Center(
-                  child: CircularProgressIndicator(),
-                ),
+                child: Center(child: CircularProgressIndicator()),
               )
             else if (displayedAlerts.isEmpty)
               const Padding(
                 padding: EdgeInsets.only(top: 100),
-                child: Center(
-                  child: Text('No SOS records found'),
-                ),
+                child: Center(child: Text('No SOS records found')),
               )
             else
               ...displayedAlerts.map(_alertCard),

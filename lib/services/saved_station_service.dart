@@ -12,8 +12,7 @@ class SavedStationRecord {
   factory SavedStationRecord.fromJson(Map<String, dynamic> json) {
     return SavedStationRecord(
       stationId: json['station_id'] as String,
-      notificationsEnabled:
-      json['notifications_enabled'] as bool? ?? true,
+      notificationsEnabled: json['notifications_enabled'] as bool? ?? true,
     );
   }
 }
@@ -39,9 +38,9 @@ class SavedStationService {
     return (data as List)
         .map(
           (row) => SavedStationRecord.fromJson(
-        Map<String, dynamic>.from(row as Map),
-      ),
-    )
+            Map<String, dynamic>.from(row as Map),
+          ),
+        )
         .toList();
   }
 
@@ -57,14 +56,11 @@ class SavedStationService {
   }
 
   Future<void> saveStation(String stationId) async {
-    await _client.from('saved_stations').upsert(
-      {
-        'user_id': _userId,
-        'station_id': stationId,
-        'notifications_enabled': true,
-      },
-      onConflict: 'user_id,station_id',
-    );
+    await _client.from('saved_stations').upsert({
+      'user_id': _userId,
+      'station_id': stationId,
+      'notifications_enabled': true,
+    }, onConflict: 'user_id,station_id');
   }
 
   Future<void> removeStation(String stationId) async {
@@ -75,10 +71,7 @@ class SavedStationService {
         .eq('station_id', stationId);
   }
 
-  Future<void> updateNotifications(
-      String stationId,
-      bool enabled,
-      ) async {
+  Future<void> updateNotifications(String stationId, bool enabled) async {
     await _client
         .from('saved_stations')
         .update({'notifications_enabled': enabled})

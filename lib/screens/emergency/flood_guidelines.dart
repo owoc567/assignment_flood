@@ -81,36 +81,23 @@ class FloodGuidelinesPage extends StatelessWidget {
         elevation: 0,
         title: const Text(
           'Flood Safety Guide',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(
-          16,
-          16,
-          16,
-          30,
-        ),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 30),
         children: [
           _buildOfflineBanner(),
           const SizedBox(height: 16),
 
           const Text(
             'Emergency Guidelines',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 5),
           const Text(
             'Read these steps before, during and after a flood.',
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 13,
-            ),
+            style: TextStyle(color: Colors.grey, fontSize: 13),
           ),
           const SizedBox(height: 16),
 
@@ -134,18 +121,13 @@ class FloodGuidelinesPage extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                    const SosPage(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const SosPage()),
                 );
               },
               icon: const Icon(Icons.sos_rounded),
               label: const Text(
                 'Open Emergency SOS',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -153,12 +135,9 @@ class FloodGuidelinesPage extends StatelessWidget {
           const SizedBox(height: 16),
           const Text(
             'This guide is stored inside the application '
-                'and remains available without Internet.',
+            'and remains available without Internet.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 11,
-            ),
+            style: TextStyle(color: Colors.grey, fontSize: 11),
           ),
         ],
       ),
@@ -170,25 +149,17 @@ class FloodGuidelinesPage extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [
-            Color(0xFF3730A3),
-            Color(0xFF625BD9),
-          ],
+          colors: [Color(0xFF3730A3), Color(0xFF625BD9)],
         ),
         borderRadius: BorderRadius.circular(18),
       ),
       child: const Row(
         children: [
-          Icon(
-            Icons.offline_bolt_rounded,
-            color: Colors.white,
-            size: 34,
-          ),
+          Icon(Icons.offline_bolt_rounded, color: Colors.white, size: 34),
           SizedBox(width: 13),
           Expanded(
             child: Column(
-              crossAxisAlignment:
-              CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Available Offline',
@@ -201,7 +172,7 @@ class FloodGuidelinesPage extends StatelessWidget {
                 SizedBox(height: 4),
                 Text(
                   'You can access this safety guide even '
-                      'without an Internet connection.',
+                  'without an Internet connection.',
                   style: TextStyle(
                     color: Colors.white70,
                     fontSize: 12,
@@ -216,9 +187,7 @@ class FloodGuidelinesPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSection(
-      Map<String, dynamic> section,
-      ) {
+  Widget _buildSection(Map<String, dynamic> section) {
     final color = section['color'] as Color;
     final items = section['items'] as List<String>;
 
@@ -226,9 +195,7 @@ class FloodGuidelinesPage extends StatelessWidget {
       color: Colors.white,
       elevation: 1,
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ExpansionTile(
         leading: Container(
           width: 42,
@@ -237,44 +204,25 @@ class FloodGuidelinesPage extends StatelessWidget {
             color: color.withOpacity(0.12),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(
-            section['icon'] as IconData,
-            color: color,
-          ),
+          child: Icon(section['icon'] as IconData, color: color),
         ),
         title: Text(
           section['title'].toString(),
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
         ),
-        childrenPadding: const EdgeInsets.fromLTRB(
-          16,
-          0,
-          16,
-          16,
-        ),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         children: items.map((item) {
           return Padding(
             padding: const EdgeInsets.only(top: 11),
             child: Row(
-              crossAxisAlignment:
-              CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.check_circle,
-                  size: 18,
-                  color: color,
-                ),
+                Icon(Icons.check_circle, size: 18, color: color),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     item,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      height: 1.45,
-                    ),
+                    style: const TextStyle(fontSize: 13, height: 1.45),
                   ),
                 ),
               ],
@@ -290,24 +238,19 @@ class FloodGuidelinesPage extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.red.shade50,
-        border: Border.all(
-          color: Colors.red.shade200,
-        ),
+        border: Border.all(color: Colors.red.shade200),
         borderRadius: BorderRadius.circular(16),
       ),
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.warning_amber_rounded,
-            color: Colors.red,
-          ),
+          Icon(Icons.warning_amber_rounded, color: Colors.red),
           SizedBox(width: 12),
           Expanded(
             child: Text(
               'Never risk your life to retrieve personal '
-                  'belongings. Move to safety and request '
-                  'assistance immediately.',
+              'belongings. Move to safety and request '
+              'assistance immediately.',
               style: TextStyle(
                 color: Colors.red,
                 fontSize: 13,
