@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:assignment_flood/screens/users/sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+const String supabaseUrl = 'https://supzirushfgvowladjql.supabase.co';
+const String supabaseKey = 'sb_secret_8KYYYt-a_yxO9Zr2DmGfPw_A5M-nlKu';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  await Supabase.initialize(
-    url: 'https://supzirushfgvowladjql.supabase.co',
-    anonKey: 'sb_publishable_KBu8WzJ0dYQcnXedQbDgZg_du4P1mYJ',
-  );
-
+  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseKey,);
   runApp(const MainApp());
 }
+
+final supabase = Supabase.instance.client;
+
 
 class MainApp extends StatelessWidget {
   const MainApp({super.key});
