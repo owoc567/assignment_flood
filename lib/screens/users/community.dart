@@ -64,7 +64,22 @@ class _CommunityPageState extends State<CommunityPage> {
           .select()
           .order('created_at', ascending: false);
 
-      final posts = List<Map<String, dynamic>>.from(postResponse);
+      final allPosts =
+      List<Map<String, dynamic>>.from(postResponse);
+
+      final currentUserId = _supabase.auth.currentUser?.id;
+
+      final posts = allPosts.where((post) {
+        final status =
+            post['moderation_status']?.toString() ?? 'pending';
+
+        final isOwner =
+            post['user_id']?.toString() == currentUserId;
+
+        // Public users see verified posts.
+        // Owners can also track their own pending/rejected posts.
+        return status == 'verified' || isOwner;
+      }).toList();
 
       final userIds = posts
           .map((post) => post['user_id']?.toString())
@@ -393,13 +408,16 @@ class _CommunityPageState extends State<CommunityPage> {
         'content': content,
         'post_type': postType,
         'is_verified': false,
+        'moderation_status': 'pending',
       });
 
       if (!mounted) return true;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Post published successfully'),
+          content: Text(
+            'Post submitted and waiting for admin verification',
+          ),
           backgroundColor: Colors.green,
         ),
       );
@@ -744,7 +762,10 @@ class _CommunityPageState extends State<CommunityPage> {
     final location = post['location']?.toString().trim() ?? '';
     final title = post['title']?.toString() ?? '';
     final content = post['content']?.toString() ?? '';
-    final isVerified = post['is_verified'] == true;
+    final moderationStatus = post['moderation_status']?.toString() ?? 'pending';
+
+    final isVerified = moderationStatus == 'verified';
+    final isRejected = moderationStatus == 'rejected';
 
     final currentUserId = _supabase.auth.currentUser?.id;
     final isOwner = currentUserId == userId;
@@ -804,7 +825,7 @@ class _CommunityPageState extends State<CommunityPage> {
                             ),
                           ),
                           // Only Flood Reports can receive an admin verified badge.
-                          if (postType == 'Flood Report' && isVerified)
+                          if (isVerified)
                             const Icon(
                               Icons.verified,
                               color: Color(0xFF159957),
@@ -897,26 +918,38 @@ class _CommunityPageState extends State<CommunityPage> {
                     color: Color(0xFF252532),
                   ),
                 ),
-                if (postType == 'Flood Report' && !isVerified) ...[
+                if (!isVerified) ...[
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 5,
+                      horizontal: 10,
+                      vertical: 7,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFF4E5),
+                      color: isRejected
+                          ? const Color(0xFFFFE8E8)
+                          : const Color(0xFFFFF4E5),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.schedule, size: 14, color: Colors.orange),
-                        SizedBox(width: 5),
+                        Icon(
+                          isRejected
+                              ? Icons.cancel_outlined
+                              : Icons.schedule,
+                          size: 14,
+                          color:
+                          isRejected ? Colors.red : Colors.orange,
+                        ),
+                        const SizedBox(width: 5),
                         Text(
-                          'Waiting for admin verification',
+                          isRejected
+                              ? 'Rejected by admin'
+                              : 'Waiting for admin verification',
                           style: TextStyle(
-                            color: Colors.orange,
+                            color:
+                            isRejected ? Colors.red : Colors.orange,
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
                           ),
@@ -928,8 +961,10 @@ class _CommunityPageState extends State<CommunityPage> {
               ],
             ),
           ),
-          _buildReactionBar(post['id'], title),
-          _buildInlineComments(post['id'], title),
+          if (isVerified) ...[
+            _buildReactionBar(post['id'], title),
+            _buildInlineComments(post['id'], title),
+          ],
         ],
       ),
     );

@@ -32,7 +32,17 @@ class NotificationDatabaseService {
 
     log('SQLite database location: $path');
 
-    return openDatabase(path, version: 1, onCreate: _createDatabase);
+    return openDatabase(
+      path,
+      version: 2,
+      onCreate: _createDatabase,
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          // Remove the old hardcoded test notifications once.
+          await db.delete('Notifications');
+        }
+      },
+    );
   }
 
   // Create the Notifications table

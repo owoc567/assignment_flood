@@ -57,6 +57,49 @@ class OfflineProfileService {
     }
   }
 
+  static Future<void> saveEmergencyContact({
+    required String userId,
+    required String contactName,
+    required String contactPhone,
+    required String relationship,
+  }) async {
+    final preferences = await SharedPreferences.getInstance();
+
+    await preferences.setString(
+      _key(userId, 'emergency_contact_name'),
+      contactName,
+    );
+
+    await preferences.setString(
+      _key(userId, 'emergency_contact_phone'),
+      contactPhone,
+    );
+
+    await preferences.setString(
+      _key(userId, 'emergency_contact_relationship'),
+      relationship,
+    );
+  }
+
+  static Future<void> deleteEmergencyContact(
+      String userId,
+      ) async {
+    final preferences =
+    await SharedPreferences.getInstance();
+
+    await preferences.remove(
+      _key(userId, 'emergency_contact_name'),
+    );
+
+    await preferences.remove(
+      _key(userId, 'emergency_contact_phone'),
+    );
+
+    await preferences.remove(
+      _key(userId, 'emergency_contact_relationship'),
+    );
+  }
+
   static Future<Map<String, String>> loadProfile(
       String userId,
       ) async {
@@ -77,6 +120,24 @@ class OfflineProfileService {
       preferences.getString(_key(userId, 'profile_image_url')) ?? '',
       'created_at':
       preferences.getString(_key(userId, 'created_at')) ?? '',
+
+      'emergency_contact_name':
+      preferences.getString(
+        _key(userId, 'emergency_contact_name'),
+      ) ??
+          '',
+
+      'emergency_contact_phone':
+      preferences.getString(
+        _key(userId, 'emergency_contact_phone'),
+      ) ??
+          '',
+
+      'emergency_contact_relationship':
+      preferences.getString(
+        _key(userId, 'emergency_contact_relationship'),
+      ) ??
+          '',
     };
   }
 }

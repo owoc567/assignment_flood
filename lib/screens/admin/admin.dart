@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'manage_announcements.dart';
-import 'manageUsers.dart';
-import 'manageReports.dart';
-import 'manageSos.dart';
-import 'manageCommunity.dart';
-import 'adminProfile.dart';
+import 'manage_users.dart';
+import 'manage_reports.dart';
+import 'manage_sos.dart';
+import 'manage_community.dart';
+import 'admin_profile.dart';
 
 class AdminPage extends StatefulWidget {
   const AdminPage({super.key});
@@ -69,7 +69,11 @@ class _AdminPageState extends State<AdminPage> {
         }).length;
 
         _activeSos = sosAlerts.where((alert) {
-          return alert['status'] == 'active';
+          final status =
+          alert['status']?.toString().toLowerCase();
+
+          return status == 'active' ||
+              status == 'responding';
         }).length;
 
         _communityPosts = communityPosts.length;
@@ -429,7 +433,7 @@ class _AdminPageState extends State<AdminPage> {
                 ),
                 const SizedBox(width: 10),
                 _buildSummaryCard(
-                  title: 'Active SOS',
+                  title: 'Unresolved SOS',
                   value: _isLoadingDashboard ? '...' : _activeSos.toString(),
                   icon: Icons.sos,
                   color: Colors.red,

@@ -148,6 +148,9 @@ class _MySubmissionsPageState extends State<MySubmissionsPage> {
         return Colors.red;
 
       case 'active':
+        return Colors.red;
+
+      case 'responding':
         return Colors.orange;
 
       case 'pending':
@@ -170,6 +173,9 @@ class _MySubmissionsPageState extends State<MySubmissionsPage> {
 
       case 'active':
         return Icons.crisis_alert_rounded;
+
+      case 'responding':
+        return Icons.support_agent;
 
       case 'pending':
         return Icons.access_time_rounded;
@@ -336,11 +342,63 @@ class _MySubmissionsPageState extends State<MySubmissionsPage> {
                 Expanded(
                   child: Text(
                     _formatDate(sos['created_at']),
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    style: const TextStyle(
+                        color: Colors.grey,
+                        fontSize: 12
+                    ),
                   ),
                 ),
               ],
             ),
+            if (sos['responded_at'] != null) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.support_agent,
+                    size: 16,
+                    color: Colors.orange,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Response started: '
+                          '${_formatDate(sos['responded_at'])}',
+                      style: const TextStyle(
+                        color: Colors.orange,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            if (sos['resolved_at'] != null) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.check_circle_outline,
+                    size: 16,
+                    color: Colors.green,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Resolved: '
+                          '${_formatDate(sos['resolved_at'])}',
+                      style: const TextStyle(
+                        color: Colors.green,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),

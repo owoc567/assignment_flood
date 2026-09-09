@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:assignment_flood/services/offline_profile_service.dart';
 
 class EmergencyContactsPage extends StatefulWidget {
   const EmergencyContactsPage({super.key});
@@ -46,13 +47,30 @@ class _EmergencyContactsPageState extends State<EmergencyContactsPage> {
           .eq('id', user.id)
           .maybeSingle();
 
+      final loadedName =
+          profile?['emergency_contact_name']?.toString() ?? '';
+
+      final loadedPhone =
+          profile?['emergency_contact_phone']?.toString() ?? '';
+
+      final loadedRelationship =
+          profile?['emergency_contact_relationship']?.toString() ?? '';
+
+      if (loadedPhone.isNotEmpty) {
+        await OfflineProfileService.saveEmergencyContact(
+          userId: user.id,
+          contactName: loadedName,
+          contactPhone: loadedPhone,
+          relationship: loadedRelationship,
+        );
+      }
+
       if (!mounted) return;
 
       setState(() {
-        _contactName = profile?['emergency_contact_name']?.toString();
-        _contactPhone = profile?['emergency_contact_phone']?.toString();
-        _contactRelationship = profile?['emergency_contact_relationship']
-            ?.toString();
+        _contactName = loadedName;
+        _contactPhone = loadedPhone;
+        _contactRelationship = loadedRelationship;
         _isLoading = false;
       });
     } catch (error) {
@@ -311,6 +329,13 @@ class _EmergencyContactsPageState extends State<EmergencyContactsPage> {
           })
           .eq('id', user.id);
 
+      await OfflineProfileService.saveEmergencyContact(
+        userId: user.id,
+        contactName: name,
+        contactPhone: phoneNumber,
+        relationship: relationship,
+      );
+
       if (!mounted) return false;
 
       setState(() {
@@ -325,6 +350,100 @@ class _EmergencyContactsPageState extends State<EmergencyContactsPage> {
 
       _showMessage('Unable to save emergency contact: $error');
       return false;
+    }
+  }
+
+  Future<void> _confirmDeleteContact() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Delete Emergency Contact?'),
+          content: const Text(
+            'This contact will also be removed from '
+                'your offline SOS SMS backup.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      await _deletePersonalContact();
+    }
+  }
+
+  Future<void> _deletePersonalContact() async {
+    final user = _supabase.auth.currentUser;
+
+    if (user == null) {
+      _showMessage('Please sign in again.');
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      // Clear the contact from Supabase.
+      await _supabase
+          .from('profiles')
+          .update({
+        'emergency_contact_name': null,
+        'emergency_contact_phone': null,
+        'emergency_contact_relationship': null,
+      })
+          .eq('id', user.id);
+
+      // Clear the offline cached contact.
+      await OfflineProfileService.deleteEmergencyContact(
+        user.id,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _contactName = null;
+        _contactPhone = null;
+        _contactRelationship = null;
+        _isSaving = false;
+      });
+
+      _showMessage(
+        'Emergency contact deleted successfully.',
+      );
+    } catch (error) {
+      debugPrint(
+        'Unable to delete emergency contact: $error',
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _isSaving = false;
+      });
+
+      _showMessage(
+        'Unable to delete emergency contact: $error',
+      );
     }
   }
 
@@ -466,6 +585,15 @@ class _EmergencyContactsPageState extends State<EmergencyContactsPage> {
                       tooltip: 'Edit contact',
                       onPressed: _showContactForm,
                       icon: const Icon(Icons.edit_outlined),
+                    ),
+                    IconButton(
+                      tooltip: 'Delete contact',
+                      onPressed:
+                      _isSaving ? null : _confirmDeleteContact,
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        color: Colors.red,
+                      ),
                     ),
                   ],
                 ),

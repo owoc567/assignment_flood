@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'package:assignment_flood/screens/users/editProfile.dart';
-import 'package:assignment_flood/screens/users/changePassword.dart';
+import 'package:assignment_flood/screens/users/edit_profile.dart';
+import 'package:assignment_flood/screens/users/change_password.dart';
 
 class AdminProfilePage extends StatefulWidget {
   const AdminProfilePage({super.key});

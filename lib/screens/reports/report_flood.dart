@@ -27,15 +27,71 @@ class _ReportFloodPageState extends State<ReportFloodPage> {
     super.dispose();
   }
 
+  Future<String?> _detectImageExtension(File file) async {
+    try {
+      final bytes = await file.openRead(0, 12).first;
+
+      // JPEG signature: FF D8 FF
+      if (bytes.length >= 3 &&
+          bytes[0] == 0xFF &&
+          bytes[1] == 0xD8 &&
+          bytes[2] == 0xFF) {
+        return 'jpg';
+      }
+
+      // PNG signature: 89 50 4E 47 0D 0A 1A 0A
+      if (bytes.length >= 8 &&
+          bytes[0] == 0x89 &&
+          bytes[1] == 0x50 &&
+          bytes[2] == 0x4E &&
+          bytes[3] == 0x47 &&
+          bytes[4] == 0x0D &&
+          bytes[5] == 0x0A &&
+          bytes[6] == 0x1A &&
+          bytes[7] == 0x0A) {
+        return 'png';
+      }
+    } catch (error) {
+      debugPrint('Unable to inspect selected photo: $error');
+    }
+
+    return null;
+  }
+
   Future<void> _pickPhoto(ImageSource source) async {
     final XFile? picked = await _picker.pickImage(
       source: source,
       maxWidth: 1600,
       imageQuality: 80,
     );
+
     if (picked == null) return;
+
+    final selectedFile = File(picked.path);
+    final extension =
+    await _detectImageExtension(selectedFile);
+
+    if (extension == null) {
+      _showError(
+        'Invalid photo format. Please select a JPG, JPEG or PNG image.',
+      );
+      return;
+    }
+
+    const maximumSize = 5 * 1024 * 1024;
+    final fileSize = await selectedFile.length();
+
+    if (fileSize > maximumSize) {
+      _showError(
+        'Photo is too large. Maximum size is 5 MB.',
+      );
+      return;
+    }
+
+    if (!mounted) return;
+
     setState(() {
-      _photo = File(picked.path);
+      _photo = selectedFile;
     });
   }
 
@@ -103,8 +159,17 @@ class _ReportFloodPageState extends State<ReportFloodPage> {
       _showError('Please attach a photo of the flooding.');
       return;
     }
-    if (_descriptionController.text.trim().isEmpty) {
+    final description =_descriptionController.text.trim();
+
+    if (description.isEmpty) {
       _showError('Please describe the flood situation.');
+      return;
+    }
+
+    if (description.length > 500) {
+      _showError(
+        'Flood description cannot exceed 500 characters.',
+      );
       return;
     }
 
@@ -130,11 +195,28 @@ class _ReportFloodPageState extends State<ReportFloodPage> {
       }
 
       // Upload photo to Supabase Storage under the user's own folder.
-      final fileExt = _photo!.path.split('.').last;
+      final fileExt =await _detectImageExtension(_photo!);
+
+      if (fileExt == null) {
+        throw Exception(
+          'Invalid photo format. Only JPG, JPEG and PNG are allowed.',
+        );
+      }
+
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+
       final storagePath = '${user.id}/$fileName';
 
-      await supabase.storage.from('flood-photos').upload(storagePath, _photo!);
+      final contentType =fileExt == 'png' ? 'image/png' : 'image/jpeg';
+
+      await supabase.storage.from('flood-photos').upload(
+        storagePath,
+        _photo!,
+        fileOptions: FileOptions(
+          contentType: contentType,
+          upsert: false,
+        ),
+      );
       final photoUrl = supabase.storage
           .from('flood-photos')
           .getPublicUrl(storagePath);
@@ -155,7 +237,7 @@ class _ReportFloodPageState extends State<ReportFloodPage> {
         'full_name': fullName,
         'latitude': latitude,
         'longitude': longitude,
-        'description': _descriptionController.text.trim(),
+        'description': description,
         'photo_url': photoUrl,
         'status': 'pending',
       });
@@ -244,6 +326,7 @@ class _ReportFloodPageState extends State<ReportFloodPage> {
         TextField(
           controller: _descriptionController,
           maxLines: 4,
+          maxLength: 500,
           decoration: InputDecoration(
             hintText: 'e.g. Water rising fast on Jalan Besar, knee-deep',
             filled: true,

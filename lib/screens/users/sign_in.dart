@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:assignment_flood/screens/dashboard/dashboard.dart';
 import 'package:assignment_flood/screens/admin/admin.dart';
-import 'package:assignment_flood/screens/users/signUp.dart';
+import 'package:assignment_flood/screens/users/sign_up.dart';
 
 class SignIn extends StatefulWidget {
   const SignIn({super.key});

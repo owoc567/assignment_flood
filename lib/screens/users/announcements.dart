@@ -33,6 +33,10 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
             'created_at, expires_at',
           )
           .eq('is_active', true)
+          .or(
+        'expires_at.is.null,'
+            'expires_at.gt.${DateTime.now().toUtc().toIso8601String()}',
+        )
           .order('created_at', ascending: false);
 
       if (!mounted) return;

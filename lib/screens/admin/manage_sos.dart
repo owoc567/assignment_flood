@@ -34,7 +34,8 @@ class _ManageSosPageState extends State<ManageSosPage> {
           .from('sos_alerts')
           .select(
             'id, user_id, full_name, phone_number, '
-                'latitude, longitude, message, status, created_at',
+                'latitude, longitude, message, status, created_at, '
+                'responded_by, responded_at, resolved_by, resolved_at',
           )
               .order('created_at', ascending: false);
 
@@ -135,14 +136,25 @@ class _ManageSosPageState extends State<ManageSosPage> {
     );
   }
 
-  Future<void> _markResolved(String id) async {
+  Future<void> _confirmStatusUpdate({
+    required String id,
+    required String newStatus,
+  }) async {
+    final isStarting = newStatus == 'responding';
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Resolve SOS Case?'),
-          content: const Text(
-            'Confirm that this emergency case has been handled.',
+          title: Text(
+            isStarting
+                ? 'Start Responding?'
+                : 'Resolve SOS Case?',
+          ),
+          content: Text(
+            isStarting
+                ? 'Confirm that you are starting to handle this emergency case.'
+                : 'Confirm that this emergency case has been handled.',
           ),
           actions: [
             TextButton(
@@ -152,41 +164,85 @@ class _ManageSosPageState extends State<ManageSosPage> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor:
+                isStarting ? Colors.orange : Colors.green,
+                foregroundColor: Colors.white,
+              ),
               onPressed: () {
                 Navigator.pop(dialogContext, true);
               },
-              child: const Text('Mark Resolved'),
+              child: Text(
+                isStarting
+                    ? 'Start Responding'
+                    : 'Mark Resolved',
+              ),
             ),
           ],
         );
       },
     );
 
-    if (confirmed != true) return;
+    if (confirmed == true) {
+      await _updateStatus(
+        id: id,
+        newStatus: newStatus,
+      );
+    }
+  }
+
+  Future<void> _updateStatus({
+    required String id,
+    required String newStatus,
+  }) async {
+    final admin = _supabase.auth.currentUser;
+
+    if (admin == null) {
+      _showMessage('Please sign in again.');
+      return;
+    }
 
     setState(() {
       _updatingId = id;
     });
 
     try {
+      final now = DateTime.now().toUtc().toIso8601String();
+
+      final Map<String, dynamic> changes;
+
+      if (newStatus == 'responding') {
+        changes = {
+          'status': 'responding',
+          'responded_by': admin.id,
+          'responded_at': now,
+        };
+      } else {
+        changes = {
+          'status': 'resolved',
+          'resolved_by': admin.id,
+          'resolved_at': now,
+        };
+      }
+
       await _supabase
           .from('sos_alerts')
-          .update({'status': 'resolved'})
+          .update(changes)
           .eq('id', id);
 
       await _loadAlerts();
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('SOS case marked as resolved')),
+      _showMessage(
+        newStatus == 'responding'
+            ? 'SOS case is now being handled.'
+            : 'SOS case marked as resolved.',
       );
     } catch (error) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update SOS case: $error')),
-      );
+      _showMessage('Failed to update SOS case: $error');
     } finally {
       if (mounted) {
         setState(() {
@@ -195,6 +251,7 @@ class _ManageSosPageState extends State<ManageSosPage> {
       }
     }
   }
+
 
   Widget _filterChip(String value, String label) {
     final selected = _filter == value;
@@ -216,6 +273,8 @@ class _ManageSosPageState extends State<ManageSosPage> {
     final id = alert['id'].toString();
     final status = alert['status']?.toString() ?? 'active';
     final isActive = status == 'active';
+    final isResponding = status == 'responding';
+    final isResolved = status == 'resolved';
     final isUpdating = _updatingId == id;
 
     final phoneNumber =
@@ -244,12 +303,11 @@ class _ManageSosPageState extends State<ManageSosPage> {
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: isActive
-                      ? const Color(0xFFFFE5E5)
-                      : const Color(0xFFE6F7EC),
+                  backgroundColor:
+                  _statusColor(status).withValues(alpha: 0.12),
                   child: Icon(
-                    isActive ? Icons.sos : Icons.check,
-                    color: isActive ? Colors.red : Colors.green,
+                    _statusIcon(status),
+                    color: _statusColor(status),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -265,7 +323,7 @@ class _ManageSosPageState extends State<ManageSosPage> {
                 Text(
                   status.toUpperCase(),
                   style: TextStyle(
-                    color: isActive ? Colors.red : Colors.green,
+                    color: _statusColor(status),
                     fontWeight: FontWeight.bold,
                     fontSize: 11,
                   ),
@@ -351,6 +409,54 @@ class _ManageSosPageState extends State<ManageSosPage> {
               ],
             ),
 
+            if (alert['responded_at'] != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.support_agent,
+                    size: 18,
+                    color: Colors.orange,
+                  ),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Text(
+                      'Response started: '
+                          '${_formatDate(alert['responded_at'])}',
+                      style: const TextStyle(
+                        color: Colors.orange,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            if (alert['resolved_at'] != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.check_circle_outline,
+                    size: 18,
+                    color: Colors.green,
+                  ),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Text(
+                      'Resolved: '
+                          '${_formatDate(alert['resolved_at'])}',
+                      style: const TextStyle(
+                        color: Colors.green,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
             const SizedBox(height: 14),
 
             // Contact and map buttons
@@ -386,7 +492,7 @@ class _ManageSosPageState extends State<ManageSosPage> {
               ],
             ),
 
-            if (isActive) ...[
+            if (!isResolved) ...[
               const SizedBox(height: 14),
               SizedBox(
                 width: double.infinity,
@@ -394,18 +500,37 @@ class _ManageSosPageState extends State<ManageSosPage> {
                   onPressed: isUpdating
                       ? null
                       : () {
-                          _markResolved(id);
-                        },
+                    _confirmStatusUpdate(
+                      id: id,
+                      newStatus: isActive
+                          ? 'responding'
+                          : 'resolved',
+                    );
+                  },
                   icon: isUpdating
                       ? const SizedBox(
-                          width: 17,
-                          height: 17,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.check_circle_outline),
-                  label: Text(isUpdating ? 'Updating...' : 'Mark as Resolved'),
+                    width: 17,
+                    height: 17,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                      : Icon(
+                    isActive
+                        ? Icons.support_agent
+                        : Icons.check_circle_outline,
+                  ),
+                  label: Text(
+                    isUpdating
+                        ? 'Updating...'
+                        : isActive
+                        ? 'Start Responding'
+                        : 'Mark as Resolved',
+                  ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
+                    backgroundColor:
+                    isResponding ? Colors.green : Colors.orange,
                     foregroundColor: Colors.white,
                   ),
                 ),
@@ -415,6 +540,28 @@ class _ManageSosPageState extends State<ManageSosPage> {
         ),
       ),
     );
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'responding':
+        return Colors.orange;
+      case 'resolved':
+        return Colors.green;
+      default:
+        return Colors.red;
+    }
+  }
+
+  IconData _statusIcon(String status) {
+    switch (status) {
+      case 'responding':
+        return Icons.support_agent;
+      case 'resolved':
+        return Icons.check_circle;
+      default:
+        return Icons.sos;
+    }
   }
 
   @override
@@ -435,9 +582,11 @@ class _ManageSosPageState extends State<ManageSosPage> {
           children: [
             Wrap(
               spacing: 8,
+              runSpacing: 8,
               children: [
                 _filterChip('all', 'All'),
                 _filterChip('active', 'Active'),
+                _filterChip('responding', 'Responding'),
                 _filterChip('resolved', 'Resolved'),
               ],
             ),

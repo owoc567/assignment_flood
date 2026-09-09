@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'package:assignment_flood/screens/users/signIn.dart';
-import 'package:assignment_flood/screens/users/editProfile.dart';
-import 'package:assignment_flood/screens/users/changePassword.dart';
+import 'package:assignment_flood/screens/users/sign_in.dart';
+import 'package:assignment_flood/screens/users/edit_profile.dart';
+import 'package:assignment_flood/screens/users/change_password.dart';
 import 'package:assignment_flood/screens/emergency/sos.dart';
-import 'package:assignment_flood/screens/users/mySubmissions.dart';
+import 'package:assignment_flood/screens/users/my_submissions.dart';
 import 'package:assignment_flood/services/offline_profile_service.dart';
 
 class ProfilePage extends StatefulWidget {
