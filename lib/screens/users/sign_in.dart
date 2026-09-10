@@ -299,7 +299,7 @@ class _SignInState extends State<SignIn> {
                           ),
                         ),
 
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 14),
 
                         Align(
                           alignment: Alignment.centerRight,

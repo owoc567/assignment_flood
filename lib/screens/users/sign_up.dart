@@ -1,5 +1,5 @@
 import 'dart:io';
-
+import 'dart:async';
 import 'package:assignment_flood/screens/users/sign_in.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -30,6 +30,9 @@ class _SignUpState extends State<SignUp> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isRegistering = false;
+  bool _isCheckingEmail = false;
+  String? _emailDuplicateError;
+  Timer? _emailDebounce;
 
   File? _profileImage;
   final picker = ImagePicker();
@@ -51,9 +54,11 @@ class _SignUpState extends State<SignUp> {
         final appDocDir = await getApplicationDocumentsDirectory();
         final newImagePath = '${appDocDir.path}/profileImage.jpg';
         await _profileImage!.copy(newImagePath);
-        print('File image copied successfully to $newImagePath');
+        debugPrint(
+          'File image copied successfully to $newImagePath',
+        );
       } catch (e) {
-        print('File error copying image: $e');
+        debugPrint('File error copying image: $e');
       }
     } else {
       showDialog(
@@ -88,12 +93,15 @@ class _SignUpState extends State<SignUp> {
     // Create the destination file path
     final file = File(imagePath);
     if (await file.exists()) {
+      if (!mounted) return;
+
       setState(() {
         _profileImage = file;
-        print('File path: $imagePath');
       });
+
+      debugPrint('File path: $imagePath');
     } else {
-      print('File not found in $imagePath');
+      debugPrint('File not found in $imagePath');
     }
   }
 
@@ -227,6 +235,65 @@ class _SignUpState extends State<SignUp> {
     }
   }
 
+  void _checkEmailAvailability(String value) {
+    _emailDebounce?.cancel();
+
+    final email = value.trim().toLowerCase();
+
+    setState(() {
+      _emailDuplicateError = null;
+      _isCheckingEmail = false;
+    });
+
+    final validFormat = RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+    ).hasMatch(email);
+
+    if (!validFormat) return;
+
+    setState(() {
+      _isCheckingEmail = true;
+    });
+
+    _emailDebounce = Timer(
+      const Duration(milliseconds: 600),
+          () async {
+        try {
+          final result = await Supabase.instance.client.rpc(
+            'is_email_registered',
+            params: {
+              'check_email': email,
+            },
+          );
+
+          if (!mounted) return;
+
+          // Ignore the result if the user has typed another email.
+          if (_emailController.text.trim().toLowerCase() != email) {
+            return;
+          }
+
+          setState(() {
+            _isCheckingEmail = false;
+            _emailDuplicateError =
+            result == true ? 'This email is already registered' : null;
+          });
+
+          _formKey.currentState?.validate();
+        } catch (error) {
+          if (!mounted) return;
+
+          setState(() {
+            _isCheckingEmail = false;
+            _emailDuplicateError = null;
+          });
+
+          debugPrint('Email availability check failed: $error');
+        }
+      },
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -241,6 +308,7 @@ class _SignUpState extends State<SignUp> {
     _confirmPasswordController.dispose();
     _phoneNumberController.dispose();
     _addressController.dispose();
+    _emailDebounce?.cancel();
     super.dispose();
   }
 
@@ -268,6 +336,11 @@ class _SignUpState extends State<SignUp> {
     ).hasMatch(email)) {
       return 'Please enter a valid email address';
     }
+
+    if (_emailDuplicateError != null) {
+      return _emailDuplicateError;
+    }
+
     return null;
   }
 
@@ -478,10 +551,23 @@ class _SignUpState extends State<SignUp> {
                           textInputAction: TextInputAction.next,
                           autovalidateMode: AutovalidateMode.onUserInteraction,
                           validator: _validateEmail,
+                          onChanged: _checkEmailAvailability,
                           decoration: InputDecoration(
                             hintText: 'enter your email',
                             filled: true,
                             fillColor: Colors.grey.shade200,
+                            suffixIcon: _isCheckingEmail
+                                ? const Padding(
+                              padding: EdgeInsets.all(14),
+                              child: SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            )
+                                : null,
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16,
                               vertical: 14,
@@ -645,7 +731,7 @@ class _SignUpState extends State<SignUp> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: _isRegistering
+                            onPressed: _isRegistering || _isCheckingEmail
                                 ? null
                                 : () async {
                                     if (!_formKey.currentState!.validate()) {
@@ -662,7 +748,7 @@ class _SignUpState extends State<SignUp> {
                                 borderRadius: BorderRadius.circular(30),
                               ),
                             ),
-                            child: _isRegistering
+                            child: _isRegistering || _isCheckingEmail
                                 ? const SizedBox(
                                     width: 20,
                                     height: 20,

@@ -673,7 +673,7 @@ class _DashboardState extends State<Dashboard> {
 
                   ListTile(
                     leading: const Icon(
-                      Icons.notifications_outlined,
+                      Icons.notifications,
                       color: Color(0xFF4A45D6),
                     ),
                     title: const Text('Notifications'),
