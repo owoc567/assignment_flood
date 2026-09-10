@@ -3,6 +3,8 @@ import 'package:location/location.dart';
 import 'package:permission_handler/permission_handler.dart' as handler;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:developer';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:geolocator/geolocator.dart' as geo;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:assignment_flood/services/offline_sos_database.dart';
 import 'package:assignment_flood/services/offline_profile_service.dart';
@@ -60,19 +62,24 @@ class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
 
   // Check is location permission granted.
   Future<bool> isPermissionGranted() async {
-    return await handler.Permission.locationWhenInUse.isGranted;
+    final permission = await _location.hasPermission();
+
+    return permission == PermissionStatus.granted ||
+        permission == PermissionStatus.grantedLimited;
   }
 
   // Check is GPS enabled.
   Future<bool> isGpsEnabled() async {
-    return await handler.Permission.location.serviceStatus.isEnabled;
+    return await _location.serviceEnabled();
   }
 
   // Check both permission and GPS status, update UI.
-  void checkStatus() async {
-    bool permissionGranted = await isPermissionGranted();
-    bool gpsEnabled = await isGpsEnabled();
+  Future<void> checkStatus() async {
+    final permissionGranted = await isPermissionGranted();
+    final gpsEnabled = await isGpsEnabled();
+
     if (!mounted) return;
+
     setState(() {
       _permissionGranted = permissionGranted;
       _gpsEnabled = gpsEnabled;
@@ -93,42 +100,54 @@ class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
 
   // Request permission to access user's location.
   Future<void> requestLocationPermission() async {
-    var permissionStatus = await handler.Permission.locationWhenInUse.request();
-    log("permission status: $permissionStatus");
+    var permission = await _location.hasPermission();
+
+    if (permission == PermissionStatus.denied) {
+      permission = await _location.requestPermission();
+    }
+
+    final granted =
+        permission == PermissionStatus.granted ||
+            permission == PermissionStatus.grantedLimited;
+
     if (!mounted) return;
 
     setState(() {
-      _permissionGranted = permissionStatus == handler.PermissionStatus.granted;
+      _permissionGranted = granted;
     });
 
-    if (permissionStatus == handler.PermissionStatus.permanentlyDenied) {
-      // Android won't show the system dialog again once permanently denied.
-      // The only way to grant it now is through the app's system settings.
+    if (permission == PermissionStatus.deniedForever) {
       final goToSettings = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Permission Needed'),
-          content: const Text(
-            'Location permission was previously denied. Please enable it '
-            'manually in your device settings to use the SOS feature.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Permission Needed'),
+            content: const Text(
+              'Location permission is permanently denied. '
+                  'Please enable it from the application settings.',
             ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Open Settings'),
-            ),
-          ],
-        ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext, false);
+                },
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext, true);
+                },
+                child: const Text('Open Settings'),
+              ),
+            ],
+          );
+        },
       );
 
       if (goToSettings == true) {
         await handler.openAppSettings();
       }
-    } else if (permissionStatus != handler.PermissionStatus.granted) {
+    } else if (!granted) {
       _showError('Location permission was not granted.');
     }
   }
@@ -263,15 +282,32 @@ class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
         throw Exception('You must be signed in to send an SOS.');
       }
 
+      final connectivityResults =
+      await Connectivity().checkConnectivity();
+
+      final hasNetwork = connectivityResults.any(
+            (result) => result != ConnectivityResult.none,
+      );
+
       // Get the current GPS location.
-      final LocationData locationData = await _location.getLocation();
+      // Get the current GPS location.
+      geo.Position? position =
+      await geo.Geolocator.getLastKnownPosition();
 
-      final latitude = locationData.latitude;
-      final longitude = locationData.longitude;
+      position ??= await geo.Geolocator.getCurrentPosition(
+        locationSettings: geo.AndroidSettings(
+          accuracy: geo.LocationAccuracy.high,
+          forceLocationManager: true,
+          timeLimit: const Duration(seconds: 15),
+        ),
+      );
 
-      if (latitude == null || longitude == null) {
-        throw Exception('Unable to get your current location.');
-      }
+      final double latitude = position.latitude;
+      final double longitude = position.longitude;
+
+      debugPrint(
+        'SOS GPS location: $latitude, $longitude',
+      );
 
       String fullName = 'Unknown user';
       String phoneNumber = '';
@@ -279,6 +315,10 @@ class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
 
       // Try to obtain profile information.
       try {
+        if (!hasNetwork) {
+          throw Exception('Device is offline');
+        }
+
         final profile = await supabase
             .from('profiles')
             .select(
@@ -286,7 +326,8 @@ class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
               'emergency_contact_phone',
         )
             .eq('id', user.id)
-            .single();
+            .single()
+            .timeout(const Duration(seconds: 5));
 
         fullName = profile['full_name']?.toString() ?? 'Unknown user';
 
@@ -326,6 +367,10 @@ class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
       final situation = _messageController.text.trim();
 
       try {
+        if (!hasNetwork) {
+          throw Exception('Device is offline');
+        }
+
         // First attempt: send to Supabase.
         await supabase.from('sos_alerts').insert({
           'user_id': user.id,
@@ -335,7 +380,7 @@ class _SosPageState extends State<SosPage> with WidgetsBindingObserver {
           'longitude': longitude,
           'message': situation.isEmpty ? null : situation,
           'status': 'active',
-        });
+        }).timeout(const Duration(seconds: 5));
 
         if (!mounted) return;
 
