@@ -8,7 +8,7 @@ import 'package:assignment_flood/screens/users/reset_password.dart';
 import 'package:assignment_flood/screens/users/sign_in.dart';
 
 const String supabaseUrl = 'https://supzirushfgvowladjql.supabase.co';
-const String supabaseKey = 'sb_secret_OAhyIqFKu0HqM_LtJcIIVQ_k9vn2eqm';
+const String supabaseKey = 'sb_secret_8KYYYt-a_yxO9Zr2DmGfPw_A5M-nlKu';
 
 
 final GlobalKey<NavigatorState> navigatorKey =
