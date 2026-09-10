@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'package:assignment_flood/screens/dashboard/dashboard.dart';
-import 'package:assignment_flood/screens/admin/admin.dart';
-import 'package:assignment_flood/screens/users/sign_up.dart';
+import '../admin/admin.dart';
+import '../dashboard/dashboard.dart';
+import '../users/forgot_password.dart';
+import '../users/sign_up.dart';
 
 class SignIn extends StatefulWidget {
   const SignIn({super.key});
@@ -85,7 +86,17 @@ class _SignInState extends State<SignIn> {
         throw Exception('Unable to sign in.');
       }
 
-      // Look up the user's role to decide where to route them.
+// Synchronize profiles.email with the confirmed Auth email.
+      if (user.email != null) {
+        await supabase
+            .from('profiles')
+            .update({
+          'email': user.email!.trim().toLowerCase(),
+        })
+            .eq('id', user.id);
+      }
+
+// Look up the user's role to decide where to route them.
       String role = 'user';
       try {
         final profile = await supabase
@@ -289,6 +300,27 @@ class _SignInState extends State<SignIn> {
                         ),
 
                         const SizedBox(height: 24),
+
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ForgotPasswordPage(),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              'Forgot Password?',
+                              style: TextStyle(
+                                color: Colors.indigo,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
 
                         // Sign in button
                         SizedBox(

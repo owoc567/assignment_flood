@@ -40,6 +40,7 @@ class _DashboardState extends State<Dashboard> {
   Future<List<RainfallStation>>? heavyRainData;
   String _weatherLocationName = 'Kuala Lumpur';
   bool _isGettingLocation = false;
+  int _announcementRefreshVersion = 0;
 
   @override
   void initState() {
@@ -51,8 +52,9 @@ class _DashboardState extends State<Dashboard> {
     floodData = _floodService.fetchStationSummary();
     heavyRainData = _rainfallService.fetchRainfallStations();
 
-    // Replace Kuala Lumpur with the user's detected area when available.
-    _loadWeatherUsingCurrentLocation();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _askForLocation();
+    });
   }
 
   Future<List<Forecast>> _fetchForecastData(String locationId) async {
@@ -126,17 +128,121 @@ class _DashboardState extends State<Dashboard> {
     return replacements[name] ?? location.trim();
   }
 
+  Future<void> _askForLocation() async {
+    if (!mounted) return;
+
+    final allowLocation = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(
+                Icons.location_on,
+                color: Colors.indigo,
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text('Use Your Location'),
+              ),
+            ],
+          ),
+          content: const Text(
+            'MyFlood needs your current location to show the weather '
+                'forecast for your area. Your location will not be stored.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
+              child: const Text('Not Now'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
+              icon: const Icon(Icons.my_location),
+              label: const Text('Allow Location'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (allowLocation != true) {
+      // Continue using Kuala Lumpur weather.
+      return;
+    }
+
+    var permission = await Geolocator.checkPermission();
+
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      if (!mounted) return;
+
+      final openSettings = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Location Permission Required'),
+            content: const Text(
+              'Location permission is permanently disabled. '
+                  'Please enable it from the application settings.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext, false);
+                },
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext, true);
+                },
+                child: const Text('Open Settings'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (openSettings == true) {
+        await Geolocator.openAppSettings();
+      }
+
+      return;
+    }
+
+    if (permission == LocationPermission.denied) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Location permission was denied. Using Kuala Lumpur weather.',
+          ),
+        ),
+      );
+
+      return;
+    }
+
+    await _loadWeatherUsingCurrentLocation();
+  }
+
   Future<void> _loadWeatherUsingCurrentLocation() async {
     if (_isGettingLocation) return;
     _isGettingLocation = true;
 
     try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        throw Exception('Please turn on your phone location.');
-      }
-
       var permission = await Geolocator.checkPermission();
+
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
@@ -149,6 +255,12 @@ class _DashboardState extends State<Dashboard> {
         throw Exception(
           'Location permission is permanently denied. Enable it in Settings.',
         );
+      }
+
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+
+      if (!serviceEnabled) {
+        throw Exception('Please turn on your phone location.');
       }
 
       final position = await Geolocator.getCurrentPosition(
@@ -287,10 +399,12 @@ class _DashboardState extends State<Dashboard> {
 
   Future<void> _refreshDashboard() async {
     setState(() {
+      _announcementRefreshVersion++;
       floodData = _floodService.fetchStationSummary();
+      heavyRainData = _rainfallService.fetchRainfallStations();
     });
 
-    await Future.wait([_loadWeatherUsingCurrentLocation(), floodData!]);
+    await Future.wait([_loadWeatherUsingCurrentLocation(), floodData!,heavyRainData!]);
   }
 
   void _openSearchPage() {
@@ -656,6 +770,7 @@ class _DashboardState extends State<Dashboard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 AnnouncementCarousel(
+                  key: ValueKey(_announcementRefreshVersion),
                   onTap: () {
                     Navigator.push(
                       context,

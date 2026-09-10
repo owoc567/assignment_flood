@@ -16,6 +16,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final _usernameController = TextEditingController();
   final _phoneNumberController = TextEditingController();
   final _addressController = TextEditingController();
+  final _emailController = TextEditingController();
 
   File? _newProfileImage;
   String? _existingImageUrl;
@@ -34,6 +35,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _usernameController.dispose();
     _phoneNumberController.dispose();
     _addressController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
@@ -65,6 +67,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
     try {
       final supabase = Supabase.instance.client;
       final user = supabase.auth.currentUser;
+
+      _emailController.text = user?.email ?? '';
       if (user == null) return;
 
       final data = await supabase
@@ -158,6 +162,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return null;
   }
 
+  String? _validateEmail(String? value) {
+    final email = value?.trim() ?? '';
+
+    if (email.isEmpty) {
+      return 'Please enter your email';
+    }
+
+    if (!RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+    ).hasMatch(email)) {
+      return 'Please enter a valid email address';
+    }
+
+    return null;
+  }
+
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -171,6 +191,23 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
       if (user == null) {
         throw Exception('You must be signed in to edit your profile.');
+      }
+
+      final newEmail =
+      _emailController.text.trim().toLowerCase();
+
+      final currentEmail =
+          user.email?.trim().toLowerCase() ?? '';
+
+      final bool emailChangeRequested =
+          newEmail != currentEmail;
+
+      if (emailChangeRequested) {
+        await supabase.auth.updateUser(
+          UserAttributes(email: newEmail),
+          emailRedirectTo:
+          'io.supabase.flutter://email-change-callback/',
+        );
       }
 
       String? profileImageUrl = _existingImageUrl;
@@ -200,20 +237,29 @@ class _EditProfilePageState extends State<EditProfilePage> {
         _phoneNumberController.text,
       );
 
+      final confirmedAuthEmail =
+          Supabase.instance.client.auth.currentUser?.email ??
+              currentEmail;
+
       await supabase
           .from('profiles')
           .update({
-            'full_name': _usernameController.text.trim(),
-            'phone_number': formattedPhone,
-            'address': _addressController.text.trim(),
-            'profile_image_url': profileImageUrl,
-          })
+        'email': confirmedAuthEmail.trim().toLowerCase(),
+        'full_name': _usernameController.text.trim(),
+        'phone_number': formattedPhone,
+        'address': _addressController.text.trim(),
+        'profile_image_url': profileImageUrl,
+      })
           .eq('id', user.id);
 
       if (!mounted) return;
 
+      final message = emailChangeRequested
+          ? 'Profile saved. Please check your new email and confirm the email change.'
+          : 'Profile updated successfully.';
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated successfully')),
+        SnackBar(content: Text(message)),
       );
 
       Navigator.pop(context, true); // Return true so caller can refresh.
@@ -316,6 +362,34 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           hintText: 'enter your username',
                           filled: true,
                           fillColor: Colors.grey.shade200,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 15),
+
+                      const Text(
+                        'Email',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        validator: _validateEmail,
+                        decoration: InputDecoration(
+                          hintText: 'enter your email',
+                          filled: true,
+                          fillColor: Colors.grey.shade200,
+                          prefixIcon: const Icon(Icons.email_outlined),
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 14,

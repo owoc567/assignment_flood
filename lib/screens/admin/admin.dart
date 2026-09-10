@@ -540,7 +540,7 @@ class _AdminPageState extends State<AdminPage> {
 
             _buildAdminFunctionCard(
               title: 'Manage Users',
-              subtitle: 'View, suspend and reactivate user accounts',
+              subtitle: 'View user accounts',
               icon: Icons.people_outline,
               color: const Color(0xFF7B2CBF),
               onTap: () {

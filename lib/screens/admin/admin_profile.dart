@@ -53,7 +53,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
       setState(() {
         _fullName = profile['full_name']?.toString() ?? 'Administrator';
 
-        _email = profile['email']?.toString() ?? currentUser.email ?? '';
+        _email = currentUser.email ?? profile['email']?.toString() ?? '';
 
         _phoneNumber = profile['phone_number']?.toString() ?? '';
 
