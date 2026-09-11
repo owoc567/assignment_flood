@@ -731,7 +731,7 @@ class _CommunityPageState extends State<CommunityPage> {
         radius: 19,
         backgroundColor: const Color(0xFF3730A3),
         backgroundImage: NetworkImage(imageUrl),
-        onBackgroundImageError: (_, __) {},
+        onBackgroundImageError: (_, _) {},
       );
     }
 
@@ -1061,7 +1061,7 @@ class _CommunityPageState extends State<CommunityPage> {
         radius: 15,
         backgroundColor: const Color(0xFF3730A3),
         backgroundImage: NetworkImage(imageUrl),
-        onBackgroundImageError: (_, __) {},
+        onBackgroundImageError: (_, _) {},
       );
     }
 

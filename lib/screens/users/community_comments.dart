@@ -285,7 +285,7 @@ class _CommunityCommentsPageState extends State<CommunityCommentsPage> {
         radius: 20,
         backgroundColor: const Color(0xFF3730A3),
         backgroundImage: NetworkImage(imageUrl),
-        onBackgroundImageError: (_, __) {},
+        onBackgroundImageError: (_, _) {},
       );
     }
 

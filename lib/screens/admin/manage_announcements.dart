@@ -81,6 +81,9 @@ class _ManageAnnouncementsPageState extends State<ManageAnnouncementsPage> {
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
+      enableDrag: false,
+      isDismissible: false,
+      useSafeArea: true,
       backgroundColor: Colors.white,
       builder: (bottomSheetContext) {
         return StatefulBuilder(
@@ -153,15 +156,31 @@ class _ManageAnnouncementsPageState extends State<ManageAnnouncementsPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          announcement == null
-                              ? 'Create Announcement'
-                              : 'Edit Announcement',
-                          style: const TextStyle(
-                            fontSize: 21,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                announcement == null
+                                    ? 'Create Announcement'
+                                    : 'Edit Announcement',
+                                style: const TextStyle(
+                                  fontSize: 21,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: 'Close',
+                              onPressed: isSaving
+                                  ? null
+                                  : () {
+                                Navigator.pop(bottomSheetContext, false);
+                              },
+                              icon: const Icon(Icons.close),
+                            ),
+                          ],
                         ),
+
                         const SizedBox(height: 18),
 
                         DropdownButtonFormField<String>(

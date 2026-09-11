@@ -6,7 +6,7 @@ import '../../models/flood_station.dart';
 import '../../services/flood_service.dart';
 import '../../services/saved_station_service.dart';
 import 'notification_database_service.dart';
-import 'notification_model.dart';
+import '../../models/notification_model.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});

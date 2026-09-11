@@ -1,6 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
 import 'package:html/dom.dart' as dom;
+import 'package:flutter/foundation.dart';
 
 import '../models/flood_station.dart';
 
@@ -48,9 +49,9 @@ class FloodService {
   // ============================================================
 
   Future<List<FloodStation>> fetchStations() async {
-    print('');
-    print('🔥 fetchStations() CALLED — fetching all states in parallel');
-    print('');
+    debugPrint(
+      'Fetching flood stations for all states in parallel.',
+    );
 
     final results = await Future.wait(
       stateCodes.entries.map((entry) async {
@@ -59,14 +60,18 @@ class FloodService {
         } catch (e) {
           // One state failing (e.g. a temporary timeout) shouldn't blank
           // out every other state's data.
-          print('⚠️ Failed to fetch ${entry.value} (${entry.key}): $e');
+          debugPrint(
+            'Fetching flood stations for all states in parallel.',
+          );
           return <FloodStation>[];
         }
       }),
     );
 
     final allStations = results.expand((list) => list).toList();
-    print('PARSED STATIONS (all states): ${allStations.length}');
+    debugPrint(
+      'Parsed stations for all states: ${allStations.length}',
+    );
     return allStations;
   }
 
@@ -128,7 +133,9 @@ class FloodService {
     dataTable ??= tables.isNotEmpty ? tables.first : null;
 
     if (dataTable == null) {
-      print('⚠️ No <table> found in response for $stateName');
+      debugPrint(
+        'No HTML table found in the response for $stateName.',
+      );
       return [];
     }
 
@@ -192,7 +199,9 @@ class FloodService {
       );
     }
 
-    print('$stateName: parsed ${stations.length} stations');
+    debugPrint(
+      '$stateName: parsed ${stations.length} stations.',
+    );
     return stations;
   }
 

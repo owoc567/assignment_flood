@@ -34,22 +34,22 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  image_picker: ^1.2.3
+  image_picker: ^1.2.3 #allow to choose an image
   path_provider: ^2.1.6
   shared_preferences: ^2.5.5
-  http: ^1.6.0
-  html: ^0.15.7
+  http: ^1.6.0 #download webpagge
+  html: ^0.15.7 #reads the table inside webpage
   supabase_flutter: ^2.17.2
   location: ^6.0.2
-  permission_handler: ^11.3.1
-  geolocator: ^14.0.2
-  geocoding: ^5.0.0
+  permission_handler: ^11.3.1 #requests and checks device permissisons
+  geolocator: ^14.0.2 #obtains GPS coordinates and calculates location-related info, used for weather, nearby stations and sos location
+  geocoding: ^5.0.0 #Converts coordinates into an address, or an address into coordinates.
   sqflite: ^2.4.3
-  uuid: ^4.6.0
+  uuid: ^4.6.0 #generate unique id
   path: ^1.9.1
   url_launcher: ^6.3.2
-  connectivity_plus: ^7.3.1
-  app_links: ^7.2.1
+  connectivity_plus: ^7.3.1 #detects whether phone is connected through wifi or mobile data, to decide whether send sos data to supabase or sqlite
+  app_links: ^7.2.1 #detects links that open your application, used for password reset and email-confirmation link
 
 dev_dependencies:
   flutter_test:

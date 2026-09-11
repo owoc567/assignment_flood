@@ -419,7 +419,7 @@ class _SearchPageState extends State<SearchPage> {
         ),
         padding: const EdgeInsets.only(bottom: 30),
         itemCount: _filteredStations.length,
-        separatorBuilder: (_, __) => const Divider(height: 1),
+        separatorBuilder: (_, _) => const Divider(height: 1),
         itemBuilder: (context, index) {
           final station = _filteredStations[index];
           return _buildStationTile(station);

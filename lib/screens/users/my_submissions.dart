@@ -233,7 +233,7 @@ class _MySubmissionsPageState extends State<MySubmissionsPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -292,7 +292,7 @@ class _MySubmissionsPageState extends State<MySubmissionsPage> {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.10),
+                    color: Colors.red.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(Icons.sos_rounded, color: Colors.red),

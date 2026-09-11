@@ -248,7 +248,7 @@ class _HeavyRainStationsPageState extends State<HeavyRainStationsPage> {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: _intensities.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 7),
+            separatorBuilder: (_, _) => const SizedBox(width: 7),
             itemBuilder: (context, index) {
               final value = _intensities[index];
               final selected = _selectedIntensity == value;
